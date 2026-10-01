@@ -59,6 +59,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 }
 .logo h1 span { display: block; color: var(--gold); font-size: 0.6em; letter-spacing: 0.25em; text-shadow: 0 3px 0 #5a3a00; }
 .menu { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.version { position: absolute; bottom: calc(10px + var(--safe-b)); right: calc(14px + var(--safe-r)); margin: 0; color: rgba(164, 156, 196, 0.6); font-size: 11px; font-weight: 700; }
 .hint { color: var(--muted); font-size: 13px; text-align: center; max-width: 420px; margin: 0; }
 
 /* ---------- HUD ---------- */
