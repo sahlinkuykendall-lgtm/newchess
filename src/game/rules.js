@@ -13,7 +13,7 @@ export const MELEE_HEIGHT = 2;
 export const LAVA_DAMAGE = 10;
 export const SHRINE_HEAL = 0.15;
 
-const IMPASSABLE = new Set(['water', 'pillar']);
+const IMPASSABLE = new Set(['water', 'pillar', 'tree', 'rock']);
 
 export const key = (r, c) => `${r},${c}`;
 export const manhattan = (a, b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
@@ -38,6 +38,9 @@ export function createUnit(templateId, team, r, c, facing) {
     jump: t.jump,
     range: t.range,
     backstab: t.backstab ?? DEFAULT_BACKSTAB,
+    flier: !!t.flier,
+    ai: 'charge',
+    aggro: 0,
     skills: t.skills ?? [],
     ult: t.ult ?? null,
     sp: 20,
@@ -50,10 +53,10 @@ export function createUnit(templateId, team, r, c, facing) {
 }
 
 export function createBattle(level) {
-  const tiles = level.tiles.map(row => row.map(t => ({ ...t })));
+  const tiles = level.tiles.map(row => row.map(t => (t ? { ...t } : null)));
   const units = [
     ...level.heroes.map(s => createUnit(s.id, 'hero', s.r, s.c, s.facing)),
-    ...level.enemies.map(s => createUnit(s.id, 'enemy', s.r, s.c, s.facing)),
+    ...level.enemies.map(s => Object.assign(createUnit(s.id, 'enemy', s.r, s.c, s.facing), s.ai ? { ai: s.ai, aggro: s.aggro ?? 6 } : {})),
   ];
   return { map: { rows: tiles.length, cols: tiles[0].length, tiles }, units, phase: 'hero', turn: 1 };
 }
@@ -63,7 +66,9 @@ export function tileAt(state, r, c) {
   return state.map.tiles[r][c];
 }
 
-export const isPassable = tile => !!tile && !IMPASSABLE.has(tile.type);
+// Fliers can cross water; nothing can enter empty space, pillars, trees or rocks.
+export const isPassable = (tile, unit = null) =>
+  !!tile && (!IMPASSABLE.has(tile.type) || (unit?.flier && tile.type === 'water'));
 
 export function unitAt(state, r, c) {
   return state.units.find(u => u.alive && u.r === r && u.c === c) ?? null;
@@ -87,7 +92,7 @@ export function reachable(state, unit) {
       const k = key(r, c);
       if (nodes.has(k)) continue;
       const t = tileAt(state, r, c);
-      if (!isPassable(t) || Math.abs(t.h - here.h) > unit.jump) continue;
+      if (!isPassable(t, unit) || Math.abs(t.h - here.h) > unit.jump) continue;
       const occ = unitAt(state, r, c);
       if (occ && occ.team !== unit.team) continue;
       const node = { r, c, cost: n.cost + 1, prev: n, blocked: !!occ };
@@ -110,7 +115,7 @@ export function distanceMap(state, unit, goals) {
   const queue = [];
   for (const g of goals) {
     const k = key(g.r, g.c);
-    if (!dist.has(k) && isPassable(tileAt(state, g.r, g.c))) { dist.set(k, 0); queue.push(g); }
+    if (!dist.has(k) && isPassable(tileAt(state, g.r, g.c), unit)) { dist.set(k, 0); queue.push(g); }
   }
   while (queue.length) {
     const n = queue.shift();
@@ -121,7 +126,7 @@ export function distanceMap(state, unit, goals) {
       const k = key(r, c);
       if (dist.has(k)) continue;
       const t = tileAt(state, r, c);
-      if (!isPassable(t) || Math.abs(t.h - here.h) > unit.jump) continue;
+      if (!isPassable(t, unit) || Math.abs(t.h - here.h) > unit.jump) continue;
       const occ = unitAt(state, r, c);
       if (occ && occ.team !== unit.team) continue;
       dist.set(k, d + 1);

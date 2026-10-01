@@ -24,6 +24,7 @@ export class Battle {
     this.level = level;
     this.state = R.createBattle(level);
     this.board.setState(this.state);
+    this.board.focusUnits(R.livingUnits(this.state, 'hero'), { animate: false, zoom: this.board.playZoom() });
     this.sel = null;
     this.inspect = null;
     this.action = null;
@@ -34,6 +35,7 @@ export class Battle {
     audio.play('battle');
     await this.runDialog(level.intro ?? []);
     if (gen !== this.gen) return;
+    this.board.focusUnits(R.livingUnits(this.state, 'hero'));
     R.startPhase(this.state, 'hero');
     await this.banner('YOUR TURN', 'hero');
     if (gen !== this.gen) return;
@@ -140,6 +142,7 @@ export class Battle {
     this.action = null;
     this.pending = null;
     this.renderAll();
+    this.board.focusTile(u.r, u.c, { onlyIfOffscreen: true });
   }
 
   deselect() {
@@ -156,6 +159,7 @@ export class Battle {
     this.renderAll();
     const path = R.moveUnit(this.state, u, r, c);
     await this.board.walk(u, path, () => audio.sfx('step'));
+    this.board.focusTile(u.r, u.c, { onlyIfOffscreen: true });
     this.mode = 'selected';
     this.renderAll();
   }
@@ -314,6 +318,7 @@ export class Battle {
         const speaker = this.state.units.find(u => u.name === line.who)
           ?? Object.values(UNITS).find(t => t.name === line.who);
         if (speaker) renderPortrait($('dialog-portrait'), speaker.look, { zoom: 1.6 });
+        if (speaker?.id) this.board.focusTile(speaker.r, speaker.c);
       };
       const next = () => {
         audio.sfx('click');
@@ -362,11 +367,15 @@ export class Battle {
     for (const u of R.livingUnits(this.state, 'enemy')) {
       if (!u.alive) continue;
       const p = planTurn(this.state, u);
+      const idle = !p.actionId && p.dest.r === u.r && p.dest.c === u.c;
+      if (idle) { u.acted = true; continue; } // guards holding position
       this.inspect = u;
       this.renderCard();
+      await this.board.focusTile(u.r, u.c, { onlyIfOffscreen: true });
       const path = R.moveUnit(this.state, u, p.dest.r, p.dest.c) ?? [];
       if (path.length > 1) await this.board.walk(u, path, () => audio.sfx('step'));
       if (p.actionId) {
+        await this.board.focusTile(p.target.r, p.target.c, { onlyIfOffscreen: true });
         const action = R.getAction(u, p.actionId);
         const plan = R.resolveAction(this.state, u, action, p.target);
         await this.board.wait(120);
@@ -381,6 +390,7 @@ export class Battle {
     this.inspect = null;
     const hEvents = R.startPhase(this.state, 'hero');
     this.renderAll();
+    this.board.focusUnits(R.livingUnits(this.state, 'hero'), { onlyIfOffscreen: true });
     await this.banner('YOUR TURN', 'hero');
     await this.showPhaseEvents(hEvents);
     if (stale() || await this.checkOutcome()) return;

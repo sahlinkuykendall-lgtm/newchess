@@ -45,6 +45,10 @@ export function planTurn(state, unit) {
 
   // No attack possible: get as close as we can to the nearest opponent.
   const foes = livingUnits(state, opponentOf(unit.team));
+  // Guards hold their post until someone comes close (or they get hurt).
+  if (unit.ai === 'guard' && unit.hp === unit.maxHp && !foes.some(f => manhattan(f, unit) <= unit.aggro)) {
+    return { dest: origin, path: [origin] };
+  }
   const goals = [];
   for (const f of foes) for (const [dr, dc] of DIRS) goals.push({ r: f.r + dr, c: f.c + dc });
   const dist = distanceMap(state, unit, goals);

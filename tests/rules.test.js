@@ -125,3 +125,18 @@ test('AI vs AI finishes the first level in a sane number of turns', () => {
     assert.ok(s.turn >= 3 && s.turn <= 25, `${level.id} took ${s.turn} turns (${result})`);
   }
 });
+
+test('every level is fully connected: each hero can walk to every enemy', () => {
+  for (const level of LEVELS) {
+    const s = createBattle(level);
+    for (const hero of livingUnits(s, 'hero')) {
+      const walker = { ...hero, mov: 999, jump: 3, team: 'nobody' };
+      s.units = [];
+      const nodes = reachable(s, walker);
+      for (const e of level.enemies) {
+        const adjacent = [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([dr, dc]) => nodes.has(key(e.r + dr, e.c + dc)) || nodes.has(key(e.r, e.c)));
+        assert.ok(adjacent, `${level.id}: ${hero.name} cannot reach enemy at ${e.r},${e.c}`);
+      }
+    }
+  }
+});

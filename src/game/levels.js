@@ -1,59 +1,70 @@
-// Level definitions. Maps are written as two grids: tile types and heights.
-//   g grass   s stone   w water   l lava   p pillar   x shrine
-const TYPE = { g: 'grass', s: 'stone', w: 'water', l: 'lava', p: 'pillar', x: 'shrine' };
+// Level definitions.
+//
+// Maps are one grid of 2-character cells: tile type + height (0-9), or ".." for
+// empty space (the edge of the island). Types:
+//   g grass   s stone   d dirt path   a sand   w water   b bridge
+//   l lava    x shrine  p pillar      T tree   R rock
+const TYPE = {
+  g: 'grass', s: 'stone', d: 'dirt', a: 'sand', w: 'water', b: 'bridge',
+  l: 'lava', x: 'shrine', p: 'pillar', T: 'tree', R: 'rock',
+};
 
-function parseMap(types, heights) {
-  const t = types.trim().split('\n').map(r => r.trim().split(/\s+/));
-  const h = heights.trim().split('\n').map(r => r.trim().split(/\s+/).map(Number));
-  return t.map((row, r) => row.map((ch, c) => ({ type: TYPE[ch], h: h[r][c] })));
+export function parseMap(text) {
+  return text.trim().split('\n').map(row => row.trim().split(/\s+/).map(cell => {
+    if (cell === '..') return null;
+    const type = TYPE[cell[0]];
+    if (!type) throw new Error(`Unknown map cell "${cell}"`);
+    return { type, h: Number(cell.slice(1)) };
+  }));
 }
 
 export const LEVELS = [
   {
     id: 'round-1',
-    name: 'Round 1 — Arena of Ash',
+    name: 'Round 1 — Ruins of Ash',
     board: 'Proving Grounds',
     mission: 'Rout: KO every member of Team Crimson Fang.',
     intro: [
-      { who: 'Varg the Red', text: 'A substitute team? The Grand Board must be desperate.' },
-      { who: 'Kai', text: 'Keep talking. It makes you easier to find.' },
+      { who: 'Varg the Red', text: 'A substitute team? The Grand Board must be desperate. Come to my fortress — if you can cross the river.' },
+      { who: 'Kai', text: 'Two bridges, one wolf. Easy math.' },
+      { who: 'Rin', text: 'Watch the walls — those imps will rain fire on anything near the gate.' },
     ],
     tiles: parseMap(`
-      s s s g g g g g g g
-      s s s g g g w w g g
-      s s s g p g w w g g
-      g g g g g g g g g l
-      g g p g x g g g l l
-      g w w g g g p g g g
-      g w w g g g g g g g
-      g g g g p g g s s s
-      g g g g g g g s s s
-      g g g g g g g s s s
-    `, `
-      2 2 2 1 1 0 0 0 0 0
-      2 2 2 1 1 0 0 0 0 0
-      2 2 2 1 3 0 0 0 0 0
-      1 1 1 1 0 0 0 0 1 0
-      1 1 3 0 1 0 0 0 0 0
-      0 0 0 0 0 0 3 0 1 1
-      0 0 0 0 0 0 0 1 1 1
-      0 0 0 0 3 0 1 2 2 2
-      0 0 0 0 0 0 1 2 2 2
-      0 0 0 0 0 0 1 2 2 2
+      .. .. .. .. .. g1 g1 g1 g1 .. .. g1 g1 g1 .. .. .. .. .. ..
+      .. .. p5 s4 s4 s4 s4 s4 p5 g1 g1 g1 g2 g2 g2 .. g2 g1 .. ..
+      .. .. s4 s3 s3 s3 s3 s3 s4 g1 g1 g2 g2 g2 g2 g2 g2 g1 .. ..
+      .. .. s4 s3 s3 s3 s3 s3 s3 d2 g1 g2 g2 g2 g2 g2 g2 g2 g1 ..
+      .. .. s4 s3 s3 s3 s3 s3 s3 d2 d1 g1 g2 g2 g2 g2 g2 g1 g1 g1
+      g2 g2 s4 s3 s3 s3 s3 s3 s4 d1 d1 g1 p3 g1 g2 g2 g1 a1 a1 a1
+      g1 g1 p5 s4 s4 s3 s3 s4 p5 g1 d1 g1 g2 g1 g1 g1 a1 w0 w0 w0
+      g1 g1 g1 g1 g1 d2 d2 a1 a1 a1 p3 g2 x2 g2 g1 a1 w0 w0 w0 w0
+      .. g1 g1 g1 g1 d1 a1 w0 w0 w0 w0 g1 g2 d1 b1 w0 w0 a1 a1 a1
+      .. g1 g1 g1 a1 d1 b1 w0 w0 w0 w0 w0 w0 b1 b1 w0 a1 g1 g1 ..
+      g1 a1 a1 a1 w0 b1 b1 a1 a1 R1 a1 w0 w0 b1 d1 a1 g1 g1 g1 ..
+      .. w0 w0 w0 w0 b1 a1 g1 g1 g1 R1 a1 a1 a1 g1 R1 g1 l0 g1 g1
+      .. w0 w0 w0 a1 d1 g1 g1 R1 g1 g1 g2 g2 g2 g2 l0 l0 g1 R1 g1
+      g2 a1 a1 a1 g1 d1 T1 d1 g1 g1 g1 g2 g2 g2 d2 l0 l0 l0 g1 ..
+      g2 T2 g2 g2 T1 d1 d1 d1 d1 d1 d1 d1 d1 d1 R2 g2 l0 g2 R1 g1
+      .. .. T2 g2 g1 g1 g1 T1 g1 s2 s2 s2 s2 s2 g2 g2 g2 g2 g1 g1
+      .. g2 g2 g1 g1 T1 g1 g1 g1 s2 s2 s2 s2 s2 g2 g2 g2 g1 g1 ..
+      .. g1 g1 T1 g1 g1 g1 g1 g1 s2 s2 s2 s2 s2 g1 g1 g1 .. .. ..
+      .. .. .. .. .. g1 g1 g1 g1 s2 s2 s2 s2 s2 g1 g1 .. .. .. ..
+      .. .. .. .. .. g1 g1 g1 .. .. g1 g1 g1 .. .. .. .. .. .. ..
     `),
     heroes: [
-      { id: 'kai', r: 7, c: 7 },
-      { id: 'goro', r: 7, c: 8 },
-      { id: 'nyx', r: 8, c: 7 },
-      { id: 'sora', r: 8, c: 9 },
-      { id: 'rin', r: 9, c: 8 },
+      { id: 'kai', r: 15, c: 11 },
+      { id: 'goro', r: 15, c: 12 },
+      { id: 'nyx', r: 15, c: 10 },
+      { id: 'sora', r: 17, c: 12 },
+      { id: 'rin', r: 16, c: 11 },
     ],
     enemies: [
-      { id: 'varg', r: 1, c: 1 },
-      { id: 'imp', r: 0, c: 2 },
-      { id: 'imp', r: 2, c: 0 },
-      { id: 'brute', r: 2, c: 2 },
-      { id: 'gargoyle', r: 1, c: 2 },
+      { id: 'varg', r: 3, c: 5, ai: 'guard', aggro: 8 },
+      { id: 'imp', r: 6, c: 4, ai: 'guard', aggro: 7 },
+      { id: 'imp', r: 5, c: 8, ai: 'guard', aggro: 7 },
+      { id: 'brute', r: 7, c: 6 },
+      { id: 'gargoyle', r: 6, c: 12 },
+      { id: 'imp', r: 8, c: 3 },
     ],
   },
 ];

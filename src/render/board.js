@@ -3,7 +3,7 @@ import { drawCharacter, drawShadow } from './sprites.js';
 import { ASPECTS } from '../game/data.js';
 
 export const TW = 64, TH = 32, HS = 14;
-const BASE = -1; // ground thickness below height 0
+const BASE = -2.5; // the island's rock base below height 0
 
 export function iso(r, c, h) {
   return { x: (c - r) * TW / 2, y: (c + r) * TH / 2 - h * HS };
@@ -16,7 +16,13 @@ const PALETTE = {
   water: { top: '#2c7fd6', top2: '#2a78cc', left: '#1d5698', right: '#174a85', rim: '#2468b5' },
   lava: { top: '#ff6a1f', top2: '#ff7d2a', left: '#7a2a10', right: '#62210c', rim: '#c2410c' },
   shrine: { top: '#d9cf9c', top2: '#d9cf9c', left: '#7a5638', right: '#634529', rim: '#a99b5f' },
+  sand: { top: '#dcc68f', top2: '#d3bd84', left: '#9b7b4c', right: '#86693e', rim: '#c4ad73' },
+  dirt: { top: '#a98257', top2: '#a07a4f', left: '#7a5638', right: '#634529', rim: '#8d6a45' },
+  bridge: { top: '#b07a42', top2: '#a8733d', left: '#6e4724', right: '#5b3a1c', rim: '#7d5229' },
 };
+// Tiles drawn on top of another ground type.
+const GROUND = { tree: 'grass', rock: 'grass' };
+const TALL = new Set(['pillar', 'tree']);
 
 const OVERLAY = {
   move: ['rgba(60,140,255,0.5)', 'rgba(170,215,255,0.95)'],
@@ -53,7 +59,9 @@ export class Board {
     this.state = state;
     this.vis.clear();
     for (const u of state.units) this.vis.set(u.id, { r: u.r, c: u.c, h: this.heightAt(u.r, u.c), dx: 0, dy: 0, alpha: 1, flashUntil: 0 });
+    this._bounds = null;
     this.fit();
+    this.cam = { ...this.overview };
   }
 
   heightAt(r, c) {
@@ -69,47 +77,113 @@ export class Board {
     this.w = w; this.h = h;
     this.canvas.width = Math.round(w * dpr);
     this.canvas.height = Math.round(h * dpr);
-    if (this.state) this.fit();
+    if (this.state) {
+      this.fit();
+      this.cam.zoom = Math.max(this.fitZoom, Math.min(this.maxZoom(), this.cam.zoom));
+    }
   }
 
   bounds() {
+    if (this._bounds) return this._bounds;
     const { rows, cols } = this.state.map;
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const t = this.state.map.tiles[r][c];
+      if (!t) continue;
       const top = iso(r, c, t.h);
       const bot = iso(r, c, BASE);
       minX = Math.min(minX, top.x - TW / 2); maxX = Math.max(maxX, top.x + TW / 2);
       minY = Math.min(minY, top.y - TH / 2 - 40); maxY = Math.max(maxY, bot.y + TH / 2);
     }
-    return { minX, maxX, minY, maxY };
+    this._bounds = { minX, maxX, minY, maxY };
+    return this._bounds;
   }
 
+  // Overview camera: the whole map fits the screen.
   fit() {
     const b = this.bounds();
     const { top, bottom, left, right } = this.insets;
     const aw = Math.max(100, this.w - left - right), ah = Math.max(100, this.h - top - bottom);
     const zoom = Math.min(aw / (b.maxX - b.minX), ah / (b.maxY - b.minY), 2.2);
-    this.cam.zoom = zoom;
-    this.cam.x = (b.minX + b.maxX) / 2 - (left - right) / 2 / zoom;
-    this.cam.y = (b.minY + b.maxY) / 2 - (top - bottom) / 2 / zoom;
     this.fitZoom = zoom;
+    this.overview = this.camFor((b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2, zoom);
   }
 
-  pan(dx, dy) {
-    this.cam.x -= dx / this.cam.zoom;
-    this.cam.y -= dy / this.cam.zoom;
+  // Zoom used while playing: characters stay big enough to tap on a phone.
+  playZoom() {
+    return Math.max(this.fitZoom, Math.min(1.7, Math.max(0.8, Math.min(this.w, this.h) / 420)));
+  }
+
+  maxZoom() { return Math.max(this.fitZoom * 1.5, 2.6); }
+
+  // Camera that puts world point (wx, wy) in the middle of the free screen area.
+  camFor(wx, wy, zoom) {
+    const { top, bottom, left, right } = this.insets;
+    return { x: wx - (left - right) / 2 / zoom, y: wy - (top - bottom) / 2 / zoom, zoom };
+  }
+
+  clampCam() {
     const b = this.bounds();
     this.cam.x = Math.max(b.minX, Math.min(b.maxX, this.cam.x));
     this.cam.y = Math.max(b.minY, Math.min(b.maxY, this.cam.y));
   }
 
+  moveCam(target, ms = 380) {
+    const from = { ...this.cam };
+    const ease = t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+    return this.tween(ms, t => {
+      const k = ease(t);
+      this.cam.x = from.x + (target.x - from.x) * k;
+      this.cam.y = from.y + (target.y - from.y) * k;
+      this.cam.zoom = from.zoom + (target.zoom - from.zoom) * k;
+    });
+  }
+
+  // Center the camera on a tile. With onlyIfOffscreen, skip when it's already comfortably visible.
+  focusTile(r, c, { animate = true, onlyIfOffscreen = false, zoom = null } = {}) {
+    const p = iso(r, c, this.heightAt(r, c));
+    if (onlyIfOffscreen) {
+      const s = this.toScreen(p.x, p.y - 20);
+      const { top, bottom, left, right } = this.insets;
+      const mx = (this.w - left - right) * 0.18, my = (this.h - top - bottom) * 0.2;
+      if (s.x > left + mx && s.x < this.w - right - mx && s.y > top + my && s.y < this.h - bottom - my) return Promise.resolve();
+    }
+    const z = zoom ?? (this.cam.zoom < this.playZoom() * 0.95 ? this.playZoom() : this.cam.zoom);
+    const target = this.camFor(p.x, p.y - 20, z);
+    this.lastFocus = { r, c };
+    if (!animate) { this.cam = target; return Promise.resolve(); }
+    return this.moveCam(target);
+  }
+
+  focusUnits(units, opts) {
+    if (!units.length) return Promise.resolve();
+    const r = Math.round(units.reduce((a, u) => a + u.r, 0) / units.length);
+    const c = Math.round(units.reduce((a, u) => a + u.c, 0) / units.length);
+    return this.focusTile(r, c, opts);
+  }
+
+  toggleOverview() {
+    if (this.cam.zoom <= this.fitZoom * 1.05) {
+      const f = this.lastFocus;
+      if (f) return this.focusTile(f.r, f.c, { zoom: this.playZoom() });
+      return this.moveCam({ ...this.overview, zoom: this.playZoom() });
+    }
+    return this.moveCam(this.overview);
+  }
+
+  pan(dx, dy) {
+    this.cam.x -= dx / this.cam.zoom;
+    this.cam.y -= dy / this.cam.zoom;
+    this.clampCam();
+  }
+
   zoomBy(f, sx, sy) {
     const before = this.toWorld(sx, sy);
-    this.cam.zoom = Math.max(this.fitZoom * 0.7, Math.min(this.fitZoom * 3, this.cam.zoom * f));
+    this.cam.zoom = Math.max(this.fitZoom * 0.9, Math.min(this.maxZoom(), this.cam.zoom * f));
     const after = this.toWorld(sx, sy);
     this.cam.x += before.x - after.x;
     this.cam.y += before.y - after.y;
+    this.clampCam();
   }
 
   toWorld(sx, sy) {
@@ -126,21 +200,26 @@ export class Board {
     return this.toScreen(p.x, p.y);
   }
 
-  // What is under the screen point? Returns { units, tile }: every unit whose
-  // sprite was hit (front-most first) and the top tile under the point.
+  // What is under the screen point? Returns { units, tile, tiles }: every unit
+  // whose sprite was hit (closest body first) and the tiles under the point.
   pick(sx, sy) {
     const w = this.toWorld(sx, sy);
     let tile = null;
+    const bodyDist = u => {
+      const v = this.vis.get(u.id);
+      const p = iso(v.r, v.c, v.h);
+      return Math.hypot(w.x - p.x, (w.y - (p.y - 22)) * 0.6);
+    };
     const units = this.state.units.filter(u => u.alive)
-      .sort((a, b) => (b.r + b.c) - (a.r + a.c))
       .filter(u => {
         const v = this.vis.get(u.id);
         const p = iso(v.r, v.c, v.h);
         return Math.abs(w.x - p.x) < 14 && w.y < p.y + 5 && w.y > p.y - 48;
-      });
+      })
+      .sort((a, b) => bodyDist(a) - bodyDist(b));
     const { rows, cols } = this.state.map;
     const order = [];
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) order.push({ r, c });
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (this.state.map.tiles[r][c]) order.push({ r, c });
     order.sort((a, b) => (b.r + b.c) - (a.r + a.c));
     const tiles = order.filter(({ r, c }) => {
       const p = iso(r, c, this.heightAt(r, c));
@@ -262,8 +341,15 @@ export class Board {
     ctx.lineJoin = 'round';
 
     const { rows, cols, tiles } = this.state.map;
+    const v0 = this.toWorld(0, 0), v1 = this.toWorld(this.w, this.h);
     const items = [];
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) items.push({ d: (r + c) * 2, r, c, tile: tiles[r][c] });
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const tile = tiles[r][c];
+      if (!tile) continue;
+      const p = iso(r, c, tile.h);
+      if (p.x < v0.x - TW || p.x > v1.x + TW || p.y < v0.y - 40 || p.y > v1.y + 120 + (tile.h - BASE) * HS) continue;
+      items.push({ d: (r + c) * 2, r, c, tile });
+    }
     for (const u of this.state.units) {
       const v = this.vis.get(u.id);
       if (!u.alive && v.alpha <= 0) continue;
@@ -301,9 +387,9 @@ export class Board {
     ctx.globalAlpha = 1;
   }
 
-  // Tall blocks fade out when a unit stands right behind them.
+  // Tall blocks and trees fade out when a unit or highlight is right behind them.
   hidesUnit(r, c, tile) {
-    if (tile.type !== 'pillar') return false;
+    if (!TALL.has(tile.type)) return false;
     const behind = (pr, pc) => pr + pc < r + c && Math.abs(pr - r) <= 1 && Math.abs(pc - c) <= 1;
     if (this.state.units.some(u => u.alive && behind(u.r, u.c))) return true;
     return [[r - 1, c], [r, c - 1], [r - 1, c - 1]].some(([pr, pc]) => this.overlays.has(`${pr},${pc}`));
@@ -311,11 +397,13 @@ export class Board {
 
   drawTile(r, c, tile) {
     const { ctx } = this;
-    ctx.globalAlpha = this.hidesUnit(r, c, tile) ? 0.45 : 1;
-    const pal = PALETTE[tile.type];
+    const fade = this.hidesUnit(r, c, tile) ? 0.4 : 1;
+    ctx.globalAlpha = fade;
+    if (tile.type === 'bridge') this.drawRiverBed(r, c, tile.h - 1.3);
+    const pal = PALETTE[GROUND[tile.type] ?? tile.type];
     const h = this.heightAt(r, c);
     const p = iso(r, c, h);
-    const depth = (h - BASE) * HS;
+    const depth = tile.type === 'bridge' ? 5 : (h - BASE) * HS;
     const L = { x: p.x - TW / 2, y: p.y }, R = { x: p.x + TW / 2, y: p.y };
     const T = { x: p.x, y: p.y - TH / 2 }, B = { x: p.x, y: p.y + TH / 2 };
 
@@ -327,14 +415,14 @@ export class Board {
     ctx.moveTo(B.x, B.y); ctx.lineTo(R.x, R.y); ctx.lineTo(R.x, R.y + depth); ctx.lineTo(B.x, B.y + depth); ctx.closePath();
     ctx.fillStyle = pal.right; ctx.fill();
     // grass lip
-    if (tile.type === 'grass' || tile.type === 'shrine') {
+    if (pal.rim && tile.type !== 'bridge' && tile.type !== 'water' && tile.type !== 'lava') {
       ctx.beginPath();
       ctx.moveTo(L.x, L.y); ctx.lineTo(B.x, B.y); ctx.lineTo(R.x, R.y); ctx.lineTo(R.x, R.y + 4); ctx.lineTo(B.x, B.y + 4); ctx.lineTo(L.x, L.y + 4); ctx.closePath();
       ctx.fillStyle = pal.rim; ctx.fill();
     }
 
     // top face
-    let top = (r + c) % 2 ? pal.top : pal.top2;
+    let top = (r * 7 + c * 13) % 3 === 0 ? pal.top2 : pal.top;
     if (tile.type === 'lava') {
       const k = 0.5 + 0.5 * Math.sin(this.time / 400 + r + c);
       top = `rgb(255,${90 + 50 * k},${20 + 20 * k})`;
@@ -358,7 +446,20 @@ export class Board {
     } else if (tile.type === 'pillar') {
       ctx.strokeStyle = 'rgba(0,0,0,0.25)';
       ctx.beginPath(); ctx.moveTo(B.x - 6, B.y + 8); ctx.lineTo(B.x - 2, B.y + 20); ctx.lineTo(B.x - 7, B.y + 30); ctx.stroke();
-    } else if (tile.type === 'grass' && (r * 31 + c * 17) % 5 === 0) {
+    } else if (tile.type === 'bridge') {
+      ctx.strokeStyle = 'rgba(60,35,15,0.55)'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 1; i < 5; i++) {
+        const t = i / 5;
+        ctx.moveTo(L.x + (T.x - L.x) * t, L.y + (T.y - L.y) * t);
+        ctx.lineTo(B.x + (R.x - B.x) * t, B.y + (R.y - B.y) * t);
+      }
+      ctx.stroke();
+    } else if (tile.type === 'tree') {
+      this.drawTree(p.x, p.y, r * 13 + c * 7);
+    } else if (tile.type === 'rock') {
+      this.drawRock(p.x, p.y, r * 5 + c * 11);
+    } else if ((tile.type === 'grass' || tile.type === 'dirt') && (r * 31 + c * 17) % 5 === 0) {
       ctx.strokeStyle = '#3f7a35'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(p.x - 6, p.y + 2); ctx.lineTo(p.x - 7, p.y - 3); ctx.moveTo(p.x - 4, p.y + 2); ctx.lineTo(p.x - 3, p.y - 4); ctx.moveTo(p.x + 8, p.y - 3); ctx.lineTo(p.x + 9, p.y - 7); ctx.stroke();
     }
@@ -370,11 +471,72 @@ export class Board {
       ctx.beginPath();
       ctx.moveTo(T.x, T.y + inset / 2); ctx.lineTo(R.x - inset, R.y); ctx.lineTo(B.x, B.y - inset / 2); ctx.lineTo(L.x + inset, L.y); ctx.closePath();
       const pulse = ov === 'target' || ov === 'area' ? 0.75 + 0.25 * Math.sin(this.time / 150) : 1;
-      ctx.globalAlpha = pulse;
+      ctx.globalAlpha = pulse * fade;
       ctx.fillStyle = fill; ctx.fill();
       ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke();
     }
     ctx.globalAlpha = 1;
+  }
+
+  // Water seen under a bridge deck.
+  drawRiverBed(r, c, h) {
+    const { ctx } = this;
+    const pal = PALETTE.water;
+    const p = iso(r, c, h);
+    const depth = (h - BASE) * HS;
+    const L = { x: p.x - TW / 2, y: p.y }, R = { x: p.x + TW / 2, y: p.y };
+    const T = { x: p.x, y: p.y - TH / 2 }, B = { x: p.x, y: p.y + TH / 2 };
+    ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(B.x, B.y); ctx.lineTo(B.x, B.y + depth); ctx.lineTo(L.x, L.y + depth); ctx.closePath();
+    ctx.fillStyle = pal.left; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(B.x, B.y); ctx.lineTo(R.x, R.y); ctx.lineTo(R.x, R.y + depth); ctx.lineTo(B.x, B.y + depth); ctx.closePath();
+    ctx.fillStyle = pal.right; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(T.x, T.y); ctx.lineTo(R.x, R.y); ctx.lineTo(B.x, B.y); ctx.lineTo(L.x, L.y); ctx.closePath();
+    ctx.fillStyle = pal.top; ctx.fill();
+    // support posts
+    const top = iso(r, c, h + 1.3);
+    ctx.fillStyle = '#5b3a1c';
+    for (const [x, y] of [[top.x - 18, top.y + 2], [top.x + 18, top.y + 2], [top.x, top.y + 11]]) ctx.fillRect(x - 2, y, 4, 1.3 * HS);
+  }
+
+  drawTree(x, y, seed) {
+    const { ctx } = this;
+    const s = 0.85 + (seed % 5) * 0.06;
+    const sway = Math.sin(this.time / 900 + seed) * 1.2;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    ctx.beginPath(); ctx.ellipse(0, 2, 16, 6, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
+    ctx.fillStyle = '#6b4424'; ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.rect(-3.5, -18, 7, 20); ctx.fill(); ctx.stroke();
+    const blob = (bx, by, br, col) => {
+      ctx.beginPath(); ctx.arc(bx + sway, by, br, 0, Math.PI * 2);
+      ctx.fillStyle = col; ctx.fill(); ctx.stroke();
+    };
+    ctx.strokeStyle = '#173a1a';
+    blob(-10, -24, 11, '#2f7a3a');
+    blob(10, -25, 11, '#2f7a3a');
+    blob(0, -38, 14, '#3d9448');
+    blob(-4, -28, 10, '#46a352');
+    ctx.beginPath(); ctx.arc(-4 + sway, -42, 4, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fill();
+    ctx.restore();
+  }
+
+  drawRock(x, y, seed) {
+    const { ctx } = this;
+    const s = 0.9 + (seed % 4) * 0.08;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s * (seed % 2 ? 1 : -1), s);
+    ctx.beginPath(); ctx.ellipse(0, 3, 17, 6, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-16, 3); ctx.lineTo(-13, -10); ctx.lineTo(-4, -19); ctx.lineTo(8, -17); ctx.lineTo(15, -7); ctx.lineTo(16, 3); ctx.closePath();
+    ctx.fillStyle = '#8b8798'; ctx.fill();
+    ctx.strokeStyle = '#2b2838'; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-13, -10); ctx.lineTo(-4, -19); ctx.lineTo(8, -17); ctx.lineTo(0, -9); ctx.closePath();
+    ctx.fillStyle = '#a9a5b6'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(16, 3); ctx.lineTo(15, -7); ctx.lineTo(8, -17); ctx.closePath();
+    ctx.fillStyle = '#6f6b7e'; ctx.fill();
+    ctx.restore();
   }
 
   drawUnit(u, v) {

@@ -19,7 +19,7 @@ own characters, world and story. See **[DESIGN.md](DESIGN.md)** for the full pla
 - A forecast shows the exact damage. Tap the target again (or **Confirm**) to strike.
 - **Undo** a move before you act. **Wait** to end that unit's turn. **End Turn** when you're done.
 - Tap an enemy to see its stats and the purple zone it can reach next turn.
-- Drag to pan the board, pinch to zoom, double-tap to reset the view.
+- The camera follows the action. Drag to pan, pinch to zoom, tap 🗺 to see the whole map.
 - Tips: hit enemies **from behind** (backstab), stand **next to the target** to add combo hits,
   use the **aspect wheel** (`?` button), heal on the **shrine**, and stay off the **lava**.
 

@@ -109,7 +109,8 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .act small { color: var(--muted); font-weight: 700; }
 .act.active { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
 .act.ult { border-color: rgba(255, 210, 63, 0.7); background: linear-gradient(90deg, rgba(176, 108, 255, 0.45), rgba(255, 106, 61, 0.35)); animation: glow 0.7s infinite alternate; }
-.act:disabled { opacity: 0.38; animation: none; }
+.act:disabled { color: rgba(244, 241, 255, 0.35); background: rgba(18, 15, 31, 0.92); animation: none; }
+.act:disabled small { color: rgba(164, 156, 196, 0.45); }
 .act-row { display: flex; gap: 6px; }
 .act-row .act { flex: 1; justify-content: center; }
 
@@ -200,6 +201,10 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 
 /* Portrait layout */
 @media (orientation: portrait) {
+  .pill { font-size: 12px; padding: 6px 10px; white-space: nowrap; }
+  .top-actions { gap: 5px; }
+  .icon-btn { width: 32px; height: 32px; font-size: 14px; }
+  #btn-end { white-space: nowrap; padding: 7px 10px; font-size: 13px; }
   #unit-card { left: calc(8px + var(--safe-l)); right: calc(8px + var(--safe-r)); width: auto; bottom: calc(8px + var(--safe-b)); }
   #actions { left: calc(8px + var(--safe-l)); right: calc(8px + var(--safe-r)); width: auto; bottom: calc(126px + var(--safe-b)); flex-direction: row; flex-wrap: wrap; }
   #actions .act { flex: 1 1 40%; }

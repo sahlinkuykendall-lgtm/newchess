@@ -22,12 +22,12 @@ gear, levels, elements and flashy special moves.
 | 6 | Turn order | Phase-based: my whole team moves, then the enemy team. |
 | 7 | View | Isometric with height levels. |
 | 8 | Squad | 5 units. |
-| 9 | Maps | Small, quick maps (~10×10). Boss maps are large and epic. |
+| 9 | Maps | "Small" maps are ~20×20 (≈250–300 tiles), irregular islands with real features — rivers & bridges, forts, forests, cliffs, lava — never a plain square. Boss maps are bigger still. The camera follows the action; 🗺 shows the whole map. |
 | 10 | Spirit energy | Yes → **SP** (0–100). Builds by dealing/taking hits + each turn. Skills cost SP; at 100 you can fire your **Ultimate**. |
 | 11 | Team combos | Yes → allies standing next to your target join in with an **Assist** hit. |
 | 12 | Positioning | Only **backstab**: hitting a unit from behind = ×1.5 (assassins ×2). |
 | 13 | Elements | **(Claude's pick)** six *Aspects* — see below. |
-| 14 | Terrain | Some: height, water (blocks), lava (burns), pillars (block), shrines (heal). |
+| 14 | Terrain | Height, water (blocks; fliers cross), bridges, lava (burns), pillars/trees/rocks (block), shrines (heal), sand & dirt paths. |
 | 15 | Missions | Keep all 4 originals + add more. Main campaign + an Extra Battles section. |
 | 16 | 1v1 duels | No. |
 | 17 | Roster | 20+ characters. |
@@ -70,11 +70,22 @@ Lumen ⇄ Umbra                               (each deals ×1.5 to the other)
 ### Terrain
 | Tile | Effect |
 |------|--------|
-| Grass / Stone | Normal |
-| Water | Impassable (fliers can cross later) |
-| Pillar | Impassable, tall |
+| Grass / Stone / Sand / Dirt | Normal |
+| Bridge | Normal — usually the only way over a river (chokepoints!) |
+| Water | Impassable, except for fliers (Gargoyles) |
+| Pillar / Tree / Rock | Impassable; tall ones fade out when something stands behind them |
+| Empty space (`..`) | The edge of the floating island |
 | Lava | Passable; burns 10 HP at the start of your phase |
 | Shrine | Heals 15% max HP at the start of your phase |
+
+### Enemy behaviour
+- **Charge** (default): head for the nearest hero and attack the best target.
+- **Guard**: hold position (e.g. on fortress walls) until a hero comes within its aggro range or it gets hurt.
+
+## Map format
+Maps live in `src/game/levels.js` as one grid of 2-character cells — tile type + height —
+e.g. `g1` grass at height 1, `s4` stone wall at height 4, `..` empty space. A unit test checks
+every hero can reach every enemy, so a typo can't make a level unwinnable.
 
 ## Mission types (planned)
 1. **Rout** – KO all enemies *(v0)*
@@ -94,7 +105,7 @@ A street brawler named **Kai** gets dragged in as a last-minute substitute.
 
 | Board | Theme | Boss |
 |-------|-------|------|
-| 1. Proving Grounds | Qualifier arena, ash & stone | Varg the Red (Team Crimson Fang) |
+| 1. Proving Grounds | Ruins of Ash: river, two bridges, Varg's fortress | Varg the Red (Team Crimson Fang) |
 | 2. Ember Wastes | Lava fields | TBD |
 | 3. Drowned Court | Sunken palace, water | TBD |
 | 4. Sky Spire | Floating islands, wind | TBD |

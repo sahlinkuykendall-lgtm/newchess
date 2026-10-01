@@ -87,7 +87,7 @@ function endPointer(e) {
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('wheel', e => { e.preventDefault(); board.zoomBy(e.deltaY < 0 ? 1.1 : 0.9, e.clientX, e.clientY); }, { passive: false });
-canvas.addEventListener('dblclick', () => board.fit());
+$('btn-map').addEventListener('click', () => { audio.sfx('click'); board.toggleOverview(); });
 document.addEventListener('gesturestart', e => e.preventDefault()); // iOS page zoom
 
 // ------------------------------------------------------------------ screens
@@ -101,6 +101,7 @@ function startBattle() {
 
 function toTitle() {
   battle.stop();
+  board.setState(titleMap());
   board.setOverlays(new Map());
   $('btn-forfeit').classList.add('hidden');
   $('title').classList.remove('hidden');
@@ -141,7 +142,8 @@ $('title').addEventListener('pointerdown', () => { audio.unlock(); audio.play('t
 applySettings();
 
 // Show the arena behind the title screen.
-board.setState({ ...LEVELS[0], map: { rows: LEVELS[0].tiles.length, cols: LEVELS[0].tiles[0].length, tiles: LEVELS[0].tiles }, units: [], phase: 'hero' });
+const titleMap = () => ({ map: { rows: LEVELS[0].tiles.length, cols: LEVELS[0].tiles[0].length, tiles: LEVELS[0].tiles }, units: [], phase: 'hero' });
+board.setState(titleMap());
 
 // ---------------------------------------------------------- offline (PWA)
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
