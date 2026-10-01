@@ -4,6 +4,7 @@ import { planTurn } from '../game/ai.js';
 import { ASPECTS, UNITS } from '../game/data.js';
 import { renderPortrait } from '../render/sprites.js';
 import { audio } from '../audio.js';
+import { openProfile } from './profile.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -62,6 +63,12 @@ export class Battle {
       const b = e.target.closest('button');
       if (!b || b.disabled) return;
       this.onActionButton(b.dataset.act);
+    });
+    $('unit-card').addEventListener('click', () => {
+      const u = this.inspect ?? this.sel;
+      if (!u) return;
+      audio.sfx('click');
+      openProfile(u.templateId, u);
     });
     $('forecast').addEventListener('click', e => {
       const b = e.target.closest('button');
@@ -259,6 +266,7 @@ export class Battle {
       R.applyEvent(this.state, e);
       if (e.type === 'heal') {
         b.hitFx(t, { amount: e.amount, heal: true });
+        if (e.passive === 'bloodlust') b.floatText(t, 'BLOODLUST', '#ff4d6d');
       } else {
         const tags = [e.back && 'BACKSTAB!', e.aspect > 1 && 'STRONG', e.aspect < 1 && 'resist'].filter(Boolean).join(' ');
         const big = e.back || action.ult || e.aspect > 1;
@@ -287,7 +295,7 @@ export class Battle {
       el.classList.remove('hidden');
       // restart CSS animations
       for (const n of [el, ...el.querySelectorAll('*')]) { n.style.animation = 'none'; void n.offsetWidth; n.style.animation = ''; }
-      renderPortrait($('cutin-portrait'), u.look, { zoom: $('cutin-portrait').clientHeight / 52 });
+      renderPortrait($('cutin-portrait'), u.look, { zoom: $('cutin-portrait').clientHeight / 62 });
       audio.sfx('charge');
       setTimeout(() => { el.classList.add('hidden'); resolve(); }, 1600);
     });
@@ -317,7 +325,7 @@ export class Battle {
         $('dialog-text').textContent = line.text;
         const speaker = this.state.units.find(u => u.name === line.who)
           ?? Object.values(UNITS).find(t => t.name === line.who);
-        if (speaker) renderPortrait($('dialog-portrait'), speaker.look, { zoom: 1.6 });
+        if (speaker) renderPortrait($('dialog-portrait'), speaker.look, { focus: 'bust', zoom: 76 / 40 });
         if (speaker?.id) this.board.focusTile(speaker.r, speaker.c);
       };
       const next = () => {
@@ -341,7 +349,11 @@ export class Battle {
   async showPhaseEvents(events) {
     for (const e of events) {
       const t = R.unitById(this.state, e.targetId);
-      if (e.type === 'heal') { audio.sfx('heal'); this.board.hitFx(t, { amount: e.amount, heal: true }); }
+      if (e.type === 'heal') {
+        audio.sfx('heal');
+        this.board.hitFx(t, { amount: e.amount, heal: true });
+        if (e.passive === 'tidalGrace') this.board.floatText(t, 'TIDAL GRACE', '#7fd8ff');
+      }
       else {
         audio.sfx('hit');
         this.board.hitFx(t, { amount: e.amount, color: '#ff6a1f', text: 'BURN' });
@@ -466,12 +478,13 @@ export class Battle {
         <span class="uc-aspect" style="background:${asp.color}">${asp.name}</span></div>
       <div class="bar hp ${enemy ? 'enemy' : ''}"><i style="width:${(u.hp / u.maxHp) * 100}%"></i><b>HP ${u.hp}/${u.maxHp}</b></div>
       <div class="bar sp ${u.sp >= 100 ? 'full' : ''}"><i style="width:${u.sp}%"></i><b>SP ${u.sp}${u.sp >= 100 ? ' · ULTIMATE READY' : ''}</b></div>
+      <div class="uc-info">ⓘ</div>
       <div class="uc-stats"><span>ATK <b>${u.atk}</b></span><span>DEF <b>${u.def}</b></span><span>MOV <b>${u.mov}</b></span><span>JMP <b>${u.jump}</b></span><span>RNG <b>${u.range[0]}-${u.range[1]}</b></span></div>`;
     const sameUnit = this.cardUnitId === u.id;
     const old = sameUnit ? card.querySelector('#uc-portrait') : null;
     card.innerHTML = html;
     if (old) card.replaceChild(old, card.querySelector('#uc-portrait'));
-    else renderPortrait(card.querySelector('#uc-portrait'), u.look, { zoom: 1.35, bg: 'rgba(255,255,255,0.06)' });
+    else { const c = card.querySelector('#uc-portrait'); renderPortrait(c, u.look, { focus: 'bust', zoom: c.clientHeight / 40, bg: 'rgba(255,255,255,0.06)' }); }
     this.cardUnitId = u.id;
   }
 

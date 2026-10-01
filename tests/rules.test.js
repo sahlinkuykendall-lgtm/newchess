@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { aspectMult } from '../src/game/data.js';
 import {
-  createBattle, createUnit, reachable, key, isBehind, hitDamage, resolveAction, applyPlan,
+  createBattle, createUnit, reachable, key, isBehind, hitDamage, resolveAction, applyPlan, actionRange,
   getAction, validTargets, startPhase, outcome, moveUnit, livingUnits,
 } from '../src/game/rules.js';
 import { planTurn } from '../src/game/ai.js';
@@ -67,7 +67,7 @@ test('assists add combo hits and SP', () => {
   applyPlan(s, plan);
   assert.equal(brute.hp, before - plan.events[0].amount - plan.events[1].amount);
   assert.equal(kai.acted, true);
-  assert.equal(kai.sp, 30);
+  assert.equal(kai.sp, 35); // 20 start + 10 hit + 5 Burning Spirit
 });
 
 test('area skills hit only enemies, heals only allies', () => {
@@ -139,4 +139,53 @@ test('every level is fully connected: each hero can walk to every enemy', () => 
       }
     }
   }
+});
+
+test('passives: Kai SP, Goro bedrock, Brute sludge, Nyx double backstab', () => {
+  const kai = createUnit('kai', 'hero', 2, 2);
+  const imp = createUnit('imp', 'enemy', 2, 3, { dr: 0, dc: 1 }); // facing away from Kai
+  const s = battle([kai, imp]);
+  applyPlan(s, resolveAction(s, kai, getAction(kai, 'attack'), { r: 2, c: 3 }));
+  assert.equal(kai.sp, 20 + 10 + 5, 'Burning Spirit adds +5 SP');
+
+  const nyx = createUnit('nyx', 'hero', 2, 2);
+  const goro = createUnit('goro', 'enemy', 2, 3, { dr: 0, dc: 1 });
+  assert.equal(hitDamage(nyx, goro, 1).back, false, 'Goro cannot be backstabbed');
+  const brute = createUnit('brute', 'enemy', 2, 3, { dr: 0, dc: 1 });
+  assert.equal(hitDamage(nyx, brute, 1).amount, Math.round((25 - 14) * 2), 'Nyx backstab x2');
+
+  const sora = createUnit('sora', 'hero', 2, 0);
+  const near = hitDamage(sora, brute, 1, { from: { r: 2, c: 2 } }).amount;
+  const far = hitDamage(sora, brute, 1, { from: { r: 2, c: 0 } }).amount;
+  assert.ok(far < near, 'Sludge Body reduces ranged damage');
+});
+
+test('passives: Sora Eagle Eye, Rin Tidal Grace, Imp Fireborn, Varg Bloodlust', () => {
+  const tiles = flat(8, 8);
+  tiles[0][0].h = 2;
+  tiles[5][5].type = 'lava';
+  const sora = createUnit('sora', 'hero', 0, 0);
+  const s = battle([sora], tiles);
+  assert.deepEqual(actionRange(s, sora, { r: 0, c: 0 }, getAction(sora, 'attack')), [2, 5]);
+  assert.deepEqual(actionRange(s, sora, { r: 3, c: 3 }, getAction(sora, 'attack')), [2, 4]);
+
+  const rin = createUnit('rin', 'hero', 3, 3);
+  const kai = createUnit('kai', 'hero', 3, 4);
+  const far = createUnit('goro', 'hero', 6, 6);
+  rin.hp = 40; kai.hp = 40; far.hp = 40;
+  const imp = createUnit('imp', 'enemy', 5, 5);
+  const s2 = battle([rin, kai, far, imp], tiles);
+  s2.phase = 'enemy';
+  startPhase(s2, 'hero');
+  assert.equal(rin.hp, 46); assert.equal(kai.hp, 46); assert.equal(far.hp, 40);
+  startPhase(s2, 'enemy');
+  assert.equal(imp.hp, imp.maxHp, 'Fireborn imp ignores lava');
+
+  const varg = createUnit('varg', 'enemy', 1, 1);
+  varg.hp = 50;
+  const victim = createUnit('sora', 'hero', 1, 2);
+  victim.hp = 5;
+  const s3 = battle([varg, victim]);
+  const plan = resolveAction(s3, varg, getAction(varg, 'attack'), { r: 1, c: 2 });
+  assert.ok(plan.events.some(e => e.type === 'heal' && e.targetId === varg.id && e.amount === 15));
 });

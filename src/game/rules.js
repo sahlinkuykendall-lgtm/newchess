@@ -12,6 +12,11 @@ export const DEFAULT_BACKSTAB = 1.5;
 export const MELEE_HEIGHT = 2;
 export const LAVA_DAMAGE = 10;
 export const SHRINE_HEAL = 0.15;
+// Passive tuning
+export const BURNING_SPIRIT_SP = 5;
+export const TIDAL_GRACE_HEAL = 6;
+export const BLOODLUST_HEAL = 15;
+export const SLUDGE_RANGED = 0.75;
 
 const IMPASSABLE = new Set(['water', 'pillar', 'tree', 'rock']);
 
@@ -38,6 +43,7 @@ export function createUnit(templateId, team, r, c, facing) {
     jump: t.jump,
     range: t.range,
     backstab: t.backstab ?? DEFAULT_BACKSTAB,
+    passive: t.passive?.id ?? null,
     flier: !!t.flier,
     ai: 'charge',
     aggro: 0,
@@ -150,8 +156,16 @@ export function availableActions(unit) {
 export const canAfford = (unit, action) => unit.sp >= action.cost;
 
 // Tiles the action can be aimed at from position `from`.
-export function rangeTiles(state, unit, from, action) {
+// Sora's Eagle Eye: +1 max range for ranged actions from height 2 or more.
+export function actionRange(state, unit, from, action) {
   const [min, max] = action.range;
+  const h = tileAt(state, from.r, from.c)?.h ?? 0;
+  if (unit.passive === 'eagleEye' && max > 1 && h >= 2) return [min, max + 1];
+  return [min, max];
+}
+
+export function rangeTiles(state, unit, from, action) {
+  const [min, max] = actionRange(state, unit, from, action);
   const out = [];
   const fromTile = tileAt(state, from.r, from.c);
   for (let r = from.r - max; r <= from.r + max; r++) {
@@ -219,9 +233,10 @@ export function isBehind(from, target) {
 
 export function hitDamage(attacker, defender, power, { pierce = false, from = attacker } = {}) {
   const aspect = aspectMult(attacker.aspect, defender.aspect);
-  const back = isBehind(from, defender);
+  const back = isBehind(from, defender) && defender.passive !== 'bedrock';
+  const sludge = defender.passive === 'sludgeBody' && manhattan(from, defender) > 1 ? SLUDGE_RANGED : 1;
   const base = attacker.atk * power - (pierce ? 0 : defender.def);
-  const amount = Math.max(1, Math.round(base * aspect * (back ? attacker.backstab : 1)));
+  const amount = Math.max(1, Math.round(base * aspect * sludge * (back ? attacker.backstab : 1)));
   return { amount, aspect, back };
 }
 
@@ -252,7 +267,7 @@ export function resolveAction(state, unit, action, target) {
       addSp(t.id, SP_ON_HURT);
       events.push({ type: 'hit', sourceId: unit.id, targetId: t.id, amount, back: h.back, aspect: h.aspect, ko: hp.get(t.id) <= 0 });
     }
-    if (dealt) addSp(unit.id, SP_ON_HIT);
+    if (dealt) addSp(unit.id, SP_ON_HIT + (unit.passive === 'burningSpirit' ? BURNING_SPIRIT_SP : 0));
 
     // Assists: single-target attacks only, from allies standing next to the target.
     if (action.area === 0 && targets.length === 1) {
@@ -269,6 +284,12 @@ export function resolveAction(state, unit, action, target) {
         addSp(a.id, SP_ON_ASSIST);
         events.push({ type: 'hit', assist: true, sourceId: a.id, targetId: t.id, amount, back: false, aspect: aspectMult(a.aspect, t.aspect), ko: hp.get(t.id) <= 0 });
       }
+    }
+    // Varg's Bloodlust: a knockout heals him.
+    if (unit.passive === 'bloodlust' && events.some(e => e.ko) && hp.get(unit.id) < unit.maxHp) {
+      const amount = Math.min(BLOODLUST_HEAL, unit.maxHp - hp.get(unit.id));
+      hp.set(unit.id, hp.get(unit.id) + amount);
+      events.push({ type: 'heal', passive: 'bloodlust', sourceId: unit.id, targetId: unit.id, amount });
     }
   }
   return { unitId: unit.id, actionId: action.id, target, events, sp };
@@ -326,7 +347,7 @@ export function startPhase(state, team) {
     u.acted = false;
     u.sp = Math.min(SP_MAX, u.sp + SP_PER_TURN);
     const t = tileAt(state, u.r, u.c);
-    if (t.type === 'lava') {
+    if (t.type === 'lava' && u.passive !== 'fireborn') {
       const amount = Math.min(LAVA_DAMAGE, u.hp);
       u.hp -= amount;
       if (u.hp <= 0) u.alive = false;
@@ -335,6 +356,15 @@ export function startPhase(state, team) {
       const amount = Math.min(Math.round(u.maxHp * SHRINE_HEAL), u.maxHp - u.hp);
       u.hp += amount;
       events.push({ type: 'heal', targetId: u.id, amount });
+    }
+  }
+  // Rin's Tidal Grace: she and adjacent allies recover HP.
+  for (const rin of livingUnits(state, team).filter(u => u.passive === 'tidalGrace')) {
+    for (const u of livingUnits(state, team)) {
+      if (manhattan(u, rin) > 1 || u.hp >= u.maxHp) continue;
+      const amount = Math.min(TIDAL_GRACE_HEAL, u.maxHp - u.hp);
+      u.hp += amount;
+      events.push({ type: 'heal', passive: 'tidalGrace', targetId: u.id, amount });
     }
   }
   return events;

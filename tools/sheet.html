@@ -1,0 +1,21 @@
+<!doctype html>
+<html><body style="margin:0;background:#3a3358">
+<canvas id="c" width="1800" height="700" style="width:1800px;height:700px"></canvas>
+<script type="module">
+import { drawCharacter } from '../src/render/sprites.js';
+import { UNITS } from '../src/game/data.js';
+const ctx = document.getElementById('c').getContext('2d');
+const ids = ['kai', 'goro', 'rin', 'sora', 'nyx', 'varg', 'imp', 'brute', 'gargoyle'];
+const t = Number(new URLSearchParams(location.search).get('t') || 1000);
+ids.forEach((id, i) => {
+  for (const [row, facing] of [[0, { dr: 0, dc: 1 }], [1, { dr: -1, dc: 0 }]]) {
+    ctx.save();
+    ctx.translate(100 + i * 195, 300 + row * 340);
+    ctx.scale(3.6, 3.6);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(0, 0, 14, 5, 0, 0, 7); ctx.fill();
+    drawCharacter(ctx, UNITS[id].look, facing, t);
+    ctx.restore();
+  }
+});
+window.done = true;
+</script></body></html>

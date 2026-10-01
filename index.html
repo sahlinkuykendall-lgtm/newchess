@@ -26,6 +26,7 @@
     </div>
     <div class="menu">
       <button id="btn-start" class="btn big">Start Battle</button>
+      <button id="btn-roster" class="btn ghost">Characters</button>
       <button id="btn-title-settings" class="btn ghost">Settings</button>
     </div>
     <p class="hint">Tip: on iPhone, tap Share → <b>Add to Home Screen</b> for full-screen play.</p>
@@ -106,6 +107,26 @@
         <button id="btn-settings-close" class="btn">Done</button>
         <button id="btn-forfeit" class="btn ghost hidden">Quit Battle</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Character roster -->
+  <div id="roster" class="modal hidden">
+    <div class="modal-card roster-card">
+      <h2>Characters</h2>
+      <div class="roster-section">Your Squad</div>
+      <div id="roster-heroes" class="roster-grid"></div>
+      <div class="roster-section enemy">Team Crimson Fang</div>
+      <div id="roster-enemies" class="roster-grid"></div>
+      <div class="menu"><button id="btn-roster-close" class="btn">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Character profile -->
+  <div id="profile" class="modal hidden">
+    <div class="modal-card profile-card">
+      <button id="btn-profile-close" class="icon-btn close-x" aria-label="Close">✕</button>
+      <div id="profile-body"></div>
     </div>
   </div>
 

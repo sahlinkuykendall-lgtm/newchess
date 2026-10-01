@@ -26,7 +26,7 @@ export function planTurn(state, unit) {
   let best = null;
 
   for (const d of dests) {
-    const lava = tileAt(state, d.r, d.c).type === 'lava' ? LAVA_PENALTY : 0;
+    const lava = tileAt(state, d.r, d.c).type === 'lava' && unit.passive !== 'fireborn' ? LAVA_PENALTY : 0;
     unit.r = d.r; unit.c = d.c;
     for (const action of availableActions(unit)) {
       if (!canAfford(unit, action)) continue;
@@ -55,7 +55,7 @@ export function planTurn(state, unit) {
   let bestMove = null;
   for (const d of dests) {
     const far = dist.get(key(d.r, d.c)) ?? 99 + Math.min(...foes.map(f => manhattan(d, f)));
-    const lava = tileAt(state, d.r, d.c).type === 'lava' ? LAVA_PENALTY : 0;
+    const lava = tileAt(state, d.r, d.c).type === 'lava' && unit.passive !== 'fireborn' ? LAVA_PENALTY : 0;
     const score = far + lava * 0.5 + d.cost * 0.01;
     if (!bestMove || score < bestMove.score) bestMove = { score, dest: { r: d.r, c: d.c } };
   }

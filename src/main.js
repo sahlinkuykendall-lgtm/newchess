@@ -2,6 +2,7 @@ import { Board } from './render/board.js';
 import { Battle } from './ui/battle.js';
 import { LEVELS } from './game/levels.js';
 import { audio } from './audio.js';
+import { bindProfileUi, openRoster } from './ui/profile.js';
 
 const $ = id => document.getElementById(id);
 
@@ -133,6 +134,8 @@ $('btn-rotate-switch').addEventListener('click', () => {
   settings.orient = settings.orient === 'portrait' ? 'landscape' : 'portrait';
   saveSettings(); applySettings(); layout();
 });
+bindProfileUi(() => audio.sfx('click'));
+$('btn-roster').addEventListener('click', () => { audio.unlock(); audio.sfx('click'); openRoster(); });
 $('btn-help').addEventListener('click', () => { audio.sfx('click'); $('help').classList.remove('hidden'); });
 $('btn-help-close').addEventListener('click', () => { audio.sfx('click'); $('help').classList.add('hidden'); });
 

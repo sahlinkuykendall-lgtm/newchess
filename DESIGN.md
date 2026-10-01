@@ -111,14 +111,27 @@ A street brawler named **Kai** gets dragged in as a last-minute substitute.
 | 4. Sky Spire | Floating islands, wind | TBD |
 | 5. Black Throne | The finals | The Grandmaster |
 
-## Starting squad (v0)
-| Unit | Class | Aspect | Role | Ultimate |
-|------|-------|--------|------|----------|
-| Kai | Brawler | Blaze | Melee damage | Phoenix Breaker |
-| Goro | Guardian | Stone | Tank, area slam | Titan Crash |
-| Rin | Mystic | Tide | Healer / ranged magic | Tidal Requiem |
-| Sora | Ranger | Gale | Long-range | Skyrend Volley |
-| Nyx | Shade | Umbra | Assassin, ×2 backstab | Eclipse Edge |
+## Characters
+Every fighter has hand-drawn (procedural) anime art with idle animations, a chess-piece
+sigil, a passive ability and a full story profile — see **Characters** on the title screen,
+or tap any unit's info card in battle. Full text lives in `src/game/characters.js`.
+
+### Your squad
+| Unit | Piece | Class / Aspect | Passive | Skill · Ultimate | Hook |
+|------|-------|----------------|---------|------------------|------|
+| **Kai Hinode** (16) | Pawn | Brawler · Blaze | *Burning Spirit* — +5 SP whenever he deals damage | Flare Fist · Phoenix Breaker | Last-minute substitute street fighter; his fire came from somewhere. |
+| **Goro Ishiyama** (34) | Rook | Guardian · Stone | *Bedrock* — can’t be backstabbed | Quake Slam · Titan Crash | Temple guardian whose shield is the gate he failed to hold. |
+| **Rin Minase** (15) | Bishop | Mystic · Tide | *Tidal Grace* — heals herself + adjacent allies 6 HP each turn | Mending Wave · Tidal Requiem | Shrine maiden whose sacred orb dims every time she heals. |
+| **Sora Kazehara** (17) | Queen | Ranger · Gale | *Eagle Eye* — +1 range from height 2+ | Piercing Gale · Skyrend Volley | Banished wind-archer and the team’s real strategist. |
+| **Nyx** (?) | Knight | Shade · Umbra | *Shadow Strike* — backstabs ×2 | Night Fang · Eclipse Edge | Shadow from the Umbra who joined uninvited; hunts Crimson Fang. |
+
+### Team Crimson Fang
+| Unit | Piece | Passive | Hook |
+|------|-------|---------|------|
+| **Varg the Red** | King | *Bloodlust* — heals 15 HP on a KO | Three-time finalist; promised a wish to crush the substitutes. |
+| **Cinder Imp** | Pawn | *Fireborn* — immune to lava | Giggling fire imps that love shiny things. |
+| **Bog Brute** | Rook | *Sludge Body* — −25% damage from ranged attacks | Living swamp that grows a lily per win. |
+| **Gargoyle** | Knight | *Stone Wings* — flies over water | 600-year-old fortress statues woken by demon magic. |
 
 ## Roadmap
 - **v0 (now):** one 5v5 battle, isometric board, moves/attacks/skills/ultimates, AI, cut-ins, chiptune, PWA install.
