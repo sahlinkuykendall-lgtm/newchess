@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { aspectMult } from '../src/game/data.js';
 import {
   createBattle, createUnit, reachable, key, isBehind, hitDamage, resolveAction, applyPlan, actionRange,
-  getAction, validTargets, startPhase, outcome, moveUnit, livingUnits,
+  getAction, validTargets, startPhase, outcome, moveUnit, livingUnits, bondBonus,
 } from '../src/game/rules.js';
 import { planTurn } from '../src/game/ai.js';
 import { LEVELS } from '../src/game/levels.js';
+import { newSave, awardVictory, isStageUnlocked } from '../src/game/progress.js';
 
 const flat = (rows, cols, h = 0) =>
   Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ type: 'grass', h })));
@@ -188,4 +189,59 @@ test('passives: Sora Eagle Eye, Rin Tidal Grace, Imp Fireborn, Varg Bloodlust', 
   const s3 = battle([varg, victim]);
   const plan = resolveAction(s3, varg, getAction(varg, 'attack'), { r: 1, c: 2 });
   assert.ok(plan.events.some(e => e.type === 'heal' && e.targetId === varg.id && e.amount === 15));
+});
+
+test('levels scale stats; difficulty scales enemies only', () => {
+  const lv1 = createUnit('kai', 'hero', 0, 0);
+  const lv5 = createUnit('kai', 'hero', 0, 0, null, { lv: 5 });
+  assert.equal(lv5.maxHp, lv1.maxHp + 24);
+  assert.ok(lv5.atk > lv1.atk && lv5.def > lv1.def);
+  const level = LEVELS[0];
+  const easy = createBattle(level, { difficulty: 'easy' });
+  const hard = createBattle(level, { difficulty: 'hard' });
+  const e = s => livingUnits(s, 'enemy')[0];
+  assert.ok(e(easy).maxHp < e(hard).maxHp);
+  assert.equal(livingUnits(easy, 'hero')[0].maxHp, livingUnits(hard, 'hero')[0].maxHp);
+});
+
+test('campaign: XP, level ups, unlocks and replay XP', () => {
+  const save = newSave();
+  const r = awardVictory(save, LEVELS[0], ['kai', 'rin']);
+  assert.equal(r.firstClear, true);
+  assert.deepEqual(r.joined, ['nyx']);
+  assert.equal(save.heroes.kai.lv, 2);
+  assert.ok(save.unlocked.includes('nyx'));
+  assert.ok(isStageUnlocked(save, 1) && !isStageUnlocked(save, 2));
+  const again = awardVictory(save, LEVELS[0], ['kai']);
+  assert.equal(again.firstClear, false);
+  assert.equal(again.xp, Math.round(LEVELS[0].xp * 0.6));
+  assert.deepEqual(again.joined, []);
+});
+
+test('new passives: Dawnbreaker, Riposte, Light Feet, Sibling Bond', () => {
+  const aiko = createUnit('aiko', 'hero', 2, 2);
+  const imp = createUnit('imp', 'enemy', 2, 3, { dr: 1, dc: 0 });
+  const fresh = hitDamage(aiko, imp, 1).amount;
+  const hurt = hitDamage(aiko, imp, 1, { defHp: 10 }).amount;
+  assert.ok(fresh > hurt, 'Dawnbreaker bonus at full HP');
+
+  const mako = createUnit('mako', 'hero', 1, 1);
+  const brute = createUnit('brute', 'enemy', 1, 2);
+  const s = battle([mako, brute]);
+  const plan = resolveAction(s, brute, getAction(brute, 'attack'), { r: 1, c: 1 });
+  assert.ok(plan.events.some(e => e.counter && e.targetId === brute.id), 'Mako ripostes');
+
+  const pip = createUnit('pip', 'hero', 2, 0);
+  const wall = createUnit('brute', 'enemy', 2, 1);
+  const s2 = battle([pip, wall], flat(5, 5));
+  const nodes = reachable(s2, pip);
+  assert.ok(nodes.get(key(2, 1))?.blocked && nodes.has(key(2, 2)), 'Pip walks through but cannot stop on enemies');
+
+  const kai = createUnit('kai', 'hero', 3, 3);
+  const hana = createUnit('hana', 'hero', 3, 4);
+  const s3 = battle([kai, hana]);
+  assert.equal(bondBonus(s3, kai), 1.2);
+  assert.equal(bondBonus(s3, hana), 1.2);
+  hana.r = 0;
+  assert.equal(bondBonus(s3, kai), 1);
 });

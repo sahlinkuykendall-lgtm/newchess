@@ -3,12 +3,16 @@ import { Battle } from './ui/battle.js';
 import { LEVELS } from './game/levels.js';
 import { audio } from './audio.js';
 import { bindProfileUi, openRoster } from './ui/profile.js';
+import { showCampaign, hideCampaign, showSquad, hideSquad } from './ui/campaign.js';
+import { loadSave, resetSave, awardVictory, heroInfo } from './game/progress.js';
+import { UNITS, XP_PER_LEVEL } from './game/data.js';
+import { renderPortrait } from './render/sprites.js';
 
 const $ = id => document.getElementById(id);
 
 // ---------------------------------------------------------------- settings
 const SETTINGS_KEY = 'gambit-arena:settings';
-const settings = { music: true, sfx: true, orient: 'landscape', speed: 1 };
+const settings = { music: true, sfx: true, orient: 'landscape', speed: 1, difficulty: 'normal' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { /* private mode */ }
 
 function saveSettings() {
@@ -28,7 +32,9 @@ function applySettings() {
 // ------------------------------------------------------------------- board
 const canvas = $('board');
 const board = new Board(canvas);
-const battle = new Battle(board, {});
+const battle = new Battle(board, { onEnd: (result, info) => handleEnd(result, info) });
+let save = loadSave();
+let current = null; // { index, squad }
 
 function layout() {
   const portrait = window.innerHeight > window.innerWidth;
@@ -92,26 +98,95 @@ $('btn-map').addEventListener('click', () => { audio.sfx('click'); board.toggleO
 document.addEventListener('gesturestart', e => e.preventDefault()); // iOS page zoom
 
 // ------------------------------------------------------------------ screens
-function startBattle() {
+const esc = x => String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const hideAll = () => ['title', 'campaign', 'squad', 'result'].forEach(id => $(id).classList.add('hidden'));
+
+function openCampaign() {
   audio.unlock();
-  $('title').classList.add('hidden');
-  $('result').classList.add('hidden');
-  $('btn-forfeit').classList.remove('hidden');
-  battle.start(LEVELS[0]);
+  battle.stop();
+  hideAll();
+  hideSquad();
+  board.setState(titleMap());
+  board.setOverlays(new Map());
+  $('btn-forfeit').classList.add('hidden');
+  audio.play('title');
+  showCampaign(save, i => { audio.sfx('select'); openSquad(i); });
 }
+
+function openSquad(index) {
+  hideAll();
+  hideCampaign();
+  showSquad(save, LEVELS[index], squad => { audio.sfx('select'); startStage(index, squad); });
+}
+
+function startStage(index, squad) {
+  hideAll();
+  hideCampaign();
+  hideSquad();
+  current = { index, squad };
+  $('btn-forfeit').classList.remove('hidden');
+  battle.start(LEVELS[index], { squad, difficulty: settings.difficulty });
+}
+
+async function handleEnd(result, { level, squadIds }) {
+  const title = $('result-title');
+  const next = LEVELS[current.index + 1];
+  let html = '';
+  if (result === 'victory') {
+    if (!save.cleared[level.id] && level.outro) await battle.runDialog(level.outro);
+    const r = awardVictory(save, level, squadIds);
+    title.textContent = 'VICTORY!';
+    html += `<p class="res-sub">${esc(level.stage)} ${esc(level.name)} cleared! <b>+${r.xp} XP</b> each${r.firstClear ? '' : ' (replay)'}</p>`;
+    html += '<div class="res-list">' + r.levelUps.map(u => `
+      <div class="res-row">
+        <canvas data-id="${u.id}"></canvas>
+        <span class="res-name">${esc(UNITS[u.id].name)}</span>
+        <span class="res-lv">Lv ${u.from}${u.to > u.from ? ` → <b>${u.to}</b> <em>LEVEL UP!</em>` : ''}</span>
+        <div class="res-xp"><i style="width:${(u.xp / XP_PER_LEVEL) * 100}%"></i></div>
+      </div>`).join('') + '</div>';
+    for (const id of r.joined) html += `<div class="res-join">✨ <b>${esc(UNITS[id].name)}</b> joined your team!</div>`;
+    if (!next) html += '<div class="res-join">👑 Board 1 complete! More boards are coming.</div>';
+  } else {
+    title.textContent = 'DEFEAT';
+    html = `<p class="res-sub">Your squad was knocked out.</p>
+      <ul class="rules">
+        <li>Replay earlier stages to <b>level up</b> your heroes.</li>
+        <li>Try a different squad — check enemy aspects with the <b>?</b> chart.</li>
+        <li>Hit from <b>behind</b>, stack <b>combos</b>, and keep Rin healing.</li>
+        <li>Or switch to <b>Easy</b> in Settings.</li>
+      </ul>`;
+  }
+  title.className = result;
+  $('result-body').innerHTML = html;
+  $('btn-next').classList.toggle('hidden', !(result === 'victory' && next));
+  $('result').classList.remove('hidden');
+  for (const c of $('result-body').querySelectorAll('canvas[data-id]')) {
+    renderPortrait(c, UNITS[c.dataset.id].look, { focus: 'bust', zoom: c.clientHeight / 40, t: 1000 });
+  }
+}
+
+$('btn-start').addEventListener('click', () => { audio.sfx('click'); openCampaign(); });
+$('btn-camp-back').addEventListener('click', () => { audio.sfx('click'); toTitle(); });
+$('btn-squad-back').addEventListener('click', () => { audio.sfx('click'); openCampaign(); });
+$('btn-camp-roster').addEventListener('click', () => { audio.sfx('click'); openRoster(save.unlocked); });
+$('btn-next').addEventListener('click', () => { audio.sfx('click'); battle.stop(); openSquad(current.index + 1); });
+$('btn-retry').addEventListener('click', () => {
+  audio.sfx('click');
+  startStage(current.index, current.squad.map(h => ({ id: h.id, lv: heroInfo(save, h.id).lv })));
+});
+$('btn-to-camp').addEventListener('click', () => { audio.sfx('click'); openCampaign(); });
 
 function toTitle() {
   battle.stop();
+  hideAll();
+  hideCampaign();
+  hideSquad();
   board.setState(titleMap());
   board.setOverlays(new Map());
   $('btn-forfeit').classList.add('hidden');
   $('title').classList.remove('hidden');
   audio.play('title');
 }
-
-$('btn-start').addEventListener('click', startBattle);
-$('btn-retry').addEventListener('click', startBattle);
-$('btn-to-title').addEventListener('click', () => { audio.unlock(); toTitle(); });
 
 function openSettings() {
   audio.unlock();
@@ -120,12 +195,20 @@ function openSettings() {
   $('set-sfx').checked = settings.sfx;
   $('set-orient').value = settings.orient;
   $('set-speed').value = String(settings.speed);
+  $('set-diff').value = settings.difficulty;
   $('settings').classList.remove('hidden');
 }
 $('btn-settings').addEventListener('click', openSettings);
 $('btn-title-settings').addEventListener('click', openSettings);
 $('btn-settings-close').addEventListener('click', () => { $('settings').classList.add('hidden'); audio.sfx('click'); });
-$('btn-forfeit').addEventListener('click', () => { $('settings').classList.add('hidden'); toTitle(); });
+$('btn-forfeit').addEventListener('click', () => { $('settings').classList.add('hidden'); openCampaign(); });
+$('set-diff').addEventListener('change', e => { settings.difficulty = e.target.value; saveSettings(); });
+$('btn-reset').addEventListener('click', () => {
+  if (!confirm('Reset all progress? Hero levels, recruits and cleared stages will be lost.')) return;
+  save = resetSave();
+  $('settings').classList.add('hidden');
+  if (!$('campaign').classList.contains('hidden')) openCampaign();
+});
 $('set-music').addEventListener('change', e => { settings.music = e.target.checked; saveSettings(); applySettings(); });
 $('set-sfx').addEventListener('change', e => { settings.sfx = e.target.checked; saveSettings(); applySettings(); });
 $('set-orient').addEventListener('change', e => { settings.orient = e.target.value; saveSettings(); applySettings(); layout(); });
@@ -135,7 +218,7 @@ $('btn-rotate-switch').addEventListener('click', () => {
   saveSettings(); applySettings(); layout();
 });
 bindProfileUi(() => audio.sfx('click'));
-$('btn-roster').addEventListener('click', () => { audio.unlock(); audio.sfx('click'); openRoster(); });
+$('btn-roster').addEventListener('click', () => { audio.unlock(); audio.sfx('click'); openRoster(save.unlocked); });
 $('btn-help').addEventListener('click', () => { audio.sfx('click'); $('help').classList.remove('hidden'); });
 $('btn-help-close').addEventListener('click', () => { audio.sfx('click'); $('help').classList.add('hidden'); });
 
@@ -145,7 +228,8 @@ $('title').addEventListener('pointerdown', () => { audio.unlock(); audio.play('t
 applySettings();
 
 // Show the arena behind the title screen.
-const titleMap = () => ({ map: { rows: LEVELS[0].tiles.length, cols: LEVELS[0].tiles[0].length, tiles: LEVELS[0].tiles }, units: [], phase: 'hero' });
+const BOSS = LEVELS[LEVELS.length - 1];
+const titleMap = () => ({ map: { rows: BOSS.tiles.length, cols: BOSS.tiles[0].length, tiles: BOSS.tiles }, units: [], phase: 'hero' });
 board.setState(titleMap());
 
 // ---------------------------------------------------------- offline (PWA)
@@ -154,4 +238,4 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 }
 
 // Handy for debugging from the browser console.
-window.__gambit = { board, battle, settings };
+window.__gambit = { board, battle, settings, get save() { return save; }, startStage };

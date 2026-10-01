@@ -111,6 +111,24 @@ A street brawler named **Kai** gets dragged in as a last-minute substitute.
 | 4. Sky Spire | Floating islands, wind | TBD |
 | 5. Black Throne | The finals | The Grandmaster |
 
+## Campaign & progression (v0.4)
+Board 1 — **Proving Grounds** — is five stages with a steady difficulty ramp:
+
+| Stage | Map | Enemies | Suggested Lv | Teaches | Joins after |
+|-------|-----|---------|--------------|---------|-------------|
+| 1-1 | Training Yard (16×16) | 2 imps, 1 brute (weakened) | 1 | Backstab + combo tips | Nyx |
+| 1-2 | Windmill Hills (18×18) | 2 gargoyles, 2 imps, 1 brute | 2 | High ground, fliers | Aiko, Pip |
+| 1-3 | Ember Pits (18×18) | 3 imps, 1 gargoyle, 1 brute | 3 | Lava, Fireborn | Hana |
+| 1-4 | Mirewood (18×20) | 2 brutes, 2 gargoyles, 1 imp | 4 | Bridges, Sludge Body | Mako |
+| 1-5 👑 | Ruins of Ash (20×20) | Varg + 5 elites | 5 | Boss fortress | — |
+
+- You start with **Kai, Goro, Rin, Sora**; the squad grows to 9 heroes. Pick up to 5 per battle.
+- **XP:** every hero who fought gets the stage's XP (100–150) on a win; 100 XP = 1 level. Replays give 60%.
+- **Growth per level:** +6 HP, +1.2 ATK, +0.8 DEF (enemies use the same table, so enemy "Lv" is comparable).
+- **Difficulty:** Easy ×0.85 / Normal ×1 / Hard ×1.15 enemy HP & ATK.
+- Balance is checked by simulating every stage with the game's own AI playing your side at the suggested level.
+- Progress saves on the device (Settings → Reset Progress to start over).
+
 ## Characters
 Every fighter has hand-drawn (procedural) anime art with idle animations, a chess-piece
 sigil, a passive ability and a full story profile — see **Characters** on the title screen,
@@ -119,6 +137,10 @@ or tap any unit's info card in battle. Full text lives in `src/game/characters.j
 ### Your squad
 | Unit | Piece | Class / Aspect | Passive | Skill · Ultimate | Hook |
 |------|-------|----------------|---------|------------------|------|
+| **Aiko Amane** (18) | King | Lancer · Lumen | *Dawnbreaker* — +25% damage to full-HP enemies | Starpierce · Heaven’s Lance | The human team’s real captain, back from injury. |
+| **Pip Gearwhistle** (11) | Bishop | Tinker · Gale | *Light Feet* — walks through enemies | Gust Bomb · Thunderhead Barrage | Kid inventor who followed Sora in a homemade glider. |
+| **Hana Hinode** (13) | Pawn | Fan Dancer · Blaze | *Sibling Bond* — she and Kai +20% damage when adjacent | Ember Fan · Inferno Waltz | Kai’s little sister; snuck in with their mother’s fan. |
+| **Mako Shiomi** (22) | Knight | Duelist · Tide | *Riposte* — strikes back when hit up close | Riptide Slash · Maelstrom Waltz | Sailor swordsman looking for a new crew. |
 | **Kai Hinode** (16) | Pawn | Brawler · Blaze | *Burning Spirit* — +5 SP whenever he deals damage | Flare Fist · Phoenix Breaker | Last-minute substitute street fighter; his fire came from somewhere. |
 | **Goro Ishiyama** (34) | Rook | Guardian · Stone | *Bedrock* — can’t be backstabbed | Quake Slam · Titan Crash | Temple guardian whose shield is the gate he failed to hold. |
 | **Rin Minase** (15) | Bishop | Mystic · Tide | *Tidal Grace* — heals herself + adjacent allies 6 HP each turn | Mending Wave · Tidal Requiem | Shrine maiden whose sacred orb dims every time she heals. |
@@ -135,7 +157,7 @@ or tap any unit's info card in battle. Full text lives in `src/game/characters.j
 
 ## Roadmap
 - **v0 (now):** one 5v5 battle, isometric board, moves/attacks/skills/ultimates, AI, cut-ins, chiptune, PWA install.
-- **v1:** campaign map, XP/levels, gold, gear shop, saving, 10 levels, more mission types.
+- **v1:** ✅ campaign map, XP/levels, saving, squad select, 5 stages · next: gold, gear shop, more mission types.
 - **v2:** recruitable roster to 20+, transformations, Extra Battles, Endless mode.
 - **v3:** Tournament mode, daily/puzzle challenges, pass-and-play.
 - **v4:** online multiplayer (needs a server), real art pass, public release.

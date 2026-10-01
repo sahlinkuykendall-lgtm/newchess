@@ -21,7 +21,7 @@ const PALETTE = {
   bridge: { top: '#b07a42', top2: '#a8733d', left: '#6e4724', right: '#5b3a1c', rim: '#7d5229' },
 };
 // Tiles drawn on top of another ground type.
-const GROUND = { tree: 'grass', rock: 'grass' };
+const GROUND = { tree: 'grass', rock: 'grass', obsidian: 'dirt', boulder: 'stone' };
 const TALL = new Set(['pillar', 'tree']);
 
 const OVERLAY = {
@@ -457,8 +457,10 @@ export class Board {
       ctx.stroke();
     } else if (tile.type === 'tree') {
       this.drawTree(p.x, p.y, r * 13 + c * 7);
-    } else if (tile.type === 'rock') {
+    } else if (tile.type === 'rock' || tile.type === 'boulder') {
       this.drawRock(p.x, p.y, r * 5 + c * 11);
+    } else if (tile.type === 'obsidian') {
+      this.drawRock(p.x, p.y, r * 5 + c * 11, ['#3a3248', '#5a4f70', '#241e30']);
     } else if ((tile.type === 'grass' || tile.type === 'dirt') && (r * 31 + c * 17) % 5 === 0) {
       ctx.strokeStyle = '#3f7a35'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(p.x - 6, p.y + 2); ctx.lineTo(p.x - 7, p.y - 3); ctx.moveTo(p.x - 4, p.y + 2); ctx.lineTo(p.x - 3, p.y - 4); ctx.moveTo(p.x + 8, p.y - 3); ctx.lineTo(p.x + 9, p.y - 7); ctx.stroke();
@@ -521,7 +523,7 @@ export class Board {
     ctx.restore();
   }
 
-  drawRock(x, y, seed) {
+  drawRock(x, y, seed, [base, light, dark] = ['#8b8798', '#a9a5b6', '#6f6b7e']) {
     const { ctx } = this;
     const s = 0.9 + (seed % 4) * 0.08;
     ctx.save();
@@ -530,12 +532,12 @@ export class Board {
     ctx.beginPath(); ctx.ellipse(0, 3, 17, 6, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fill();
     ctx.beginPath();
     ctx.moveTo(-16, 3); ctx.lineTo(-13, -10); ctx.lineTo(-4, -19); ctx.lineTo(8, -17); ctx.lineTo(15, -7); ctx.lineTo(16, 3); ctx.closePath();
-    ctx.fillStyle = '#8b8798'; ctx.fill();
+    ctx.fillStyle = base; ctx.fill();
     ctx.strokeStyle = '#2b2838'; ctx.lineWidth = 1.4; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-13, -10); ctx.lineTo(-4, -19); ctx.lineTo(8, -17); ctx.lineTo(0, -9); ctx.closePath();
-    ctx.fillStyle = '#a9a5b6'; ctx.fill();
+    ctx.fillStyle = light; ctx.fill();
     ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(16, 3); ctx.lineTo(15, -7); ctx.lineTo(8, -17); ctx.closePath();
-    ctx.fillStyle = '#6f6b7e'; ctx.fill();
+    ctx.fillStyle = dark; ctx.fill();
     ctx.restore();
   }
 

@@ -6,7 +6,7 @@ import { renderPortrait } from '../render/sprites.js';
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
-export const HERO_IDS = ['kai', 'goro', 'rin', 'sora', 'nyx'];
+export const HERO_IDS = ['kai', 'goro', 'rin', 'sora', 'nyx', 'aiko', 'pip', 'hana', 'mako'];
 export const ENEMY_IDS = ['varg', 'imp', 'brute', 'gargoyle'];
 
 const STAT_MAX = { hp: 130, atk: 30, def: 20, mov: 7, jump: 5 };
@@ -102,9 +102,13 @@ export function closeProfile() {
   cancelAnimationFrame(anim);
 }
 
-export function openRoster() {
+// unlocked: hero ids the player has recruited (others show as silhouettes).
+export function openRoster(unlocked = HERO_IDS) {
   const card = id => {
     const t = UNITS[id];
+    if (HERO_IDS.includes(id) && !unlocked.includes(id)) {
+      return `<div class="roster-item locked"><div class="roster-q">?</div><span>???</span><small>Joins later</small></div>`;
+    }
     return `<button class="roster-item" data-id="${id}" style="--asp:${ASPECTS[t.aspect].color}">
       <canvas></canvas><span>${esc(t.name)}</span><small>${esc(t.title)} · ${esc(PROFILES[id].piece.split(' ')[0])}</small></button>`;
   };

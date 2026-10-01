@@ -25,12 +25,33 @@
       <h1>GAMBIT<span>ARENA</span></h1>
     </div>
     <div class="menu">
-      <button id="btn-start" class="btn big">Start Battle</button>
+      <button id="btn-start" class="btn big">Play</button>
       <button id="btn-roster" class="btn ghost">Characters</button>
       <button id="btn-title-settings" class="btn ghost">Settings</button>
     </div>
     <p class="hint">Tip: on iPhone, tap Share → <b>Add to Home Screen</b> for full-screen play.</p>
-    <p class="version">v0.3 · Characters update</p>
+    <p class="version">v0.4 · Campaign update</p>
+  </section>
+
+  <!-- Campaign: stage select -->
+  <section id="campaign" class="screen panel-screen hidden">
+    <div class="camp-head">
+      <button id="btn-camp-back" class="icon-btn" aria-label="Back">‹</button>
+      <div><div class="camp-kicker">THE GRAND GAMBIT</div><h2 id="camp-board">Board 1</h2></div>
+      <button id="btn-camp-roster" class="btn small ghost">Characters</button>
+    </div>
+    <div id="camp-stages" class="camp-stages"></div>
+    <p class="hint">Stuck? Replay cleared stages to level up, or try Easy in Settings.</p>
+  </section>
+
+  <!-- Squad select -->
+  <section id="squad" class="screen panel-screen hidden">
+    <div class="camp-head">
+      <button id="btn-squad-back" class="icon-btn" aria-label="Back">‹</button>
+      <div class="squad-head"><h2 id="squad-title"></h2><div id="squad-sub" class="squad-sub"></div></div>
+      <button id="btn-squad-go" class="btn">Fight!</button>
+    </div>
+    <div id="squad-grid" class="squad-grid"></div>
   </section>
 
   <!-- Battle HUD -->
@@ -77,10 +98,11 @@
   <div id="result" class="modal hidden">
     <div class="modal-card">
       <h2 id="result-title"></h2>
-      <p id="result-text"></p>
+      <div id="result-body"></div>
       <div class="menu">
-        <button id="btn-retry" class="btn">Play Again</button>
-        <button id="btn-to-title" class="btn ghost">Title</button>
+        <button id="btn-next" class="btn hidden">Next Stage ›</button>
+        <button id="btn-retry" class="btn ghost">Retry</button>
+        <button id="btn-to-camp" class="btn ghost">Campaign</button>
       </div>
     </div>
   </div>
@@ -98,6 +120,13 @@
           <option value="auto">Auto</option>
         </select>
       </label>
+      <label class="row">Difficulty
+        <select id="set-diff">
+          <option value="easy">Easy</option>
+          <option value="normal">Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
       <label class="row">Battle speed
         <select id="set-speed">
           <option value="1">Normal</option>
@@ -107,6 +136,7 @@
       <div class="menu">
         <button id="btn-settings-close" class="btn">Done</button>
         <button id="btn-forfeit" class="btn ghost hidden">Quit Battle</button>
+        <button id="btn-reset" class="btn ghost danger">Reset Progress</button>
       </div>
     </div>
   </div>

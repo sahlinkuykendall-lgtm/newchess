@@ -44,7 +44,24 @@ export const SKILLS = {
   fireball: { name: 'Fireball', kind: 'damage', cost: 35, power: 1.2, range: [2, 4], area: 1, desc: 'Explosive fire.' },
   mudSlam: { name: 'Mud Slam', kind: 'damage', cost: 30, power: 1.5, range: [1, 1], area: 0, desc: 'Heavy sludge blow.' },
   stoneDive: { name: 'Stone Dive', kind: 'damage', cost: 30, power: 1.6, range: [1, 2], area: 0, desc: 'Diving strike.' },
+  // Aiko
+  starpierce: { name: 'Starpierce', kind: 'damage', cost: 30, power: 1.6, range: [1, 2], area: 0, desc: 'A spear thrust of pure light.' },
+  heavensLance: { name: 'Heaven’s Lance', kind: 'damage', ult: true, cost: 100, power: 2.6, range: [1, 3], area: 1, desc: 'Hurls her spear like a falling star.' },
+  // Mako
+  riptideSlash: { name: 'Riptide Slash', kind: 'damage', cost: 30, power: 1.5, range: [1, 1], area: 0, pierce: true, desc: 'A slash that cuts through armor.' },
+  maelstromWaltz: { name: 'Maelstrom Waltz', kind: 'damage', ult: true, cost: 100, power: 2.3, range: [0, 0], area: 2, desc: 'Spins into a whirlpool that hits everything around him.' },
+  // Pip
+  gustBomb: { name: 'Gust Bomb', kind: 'damage', cost: 35, power: 1.3, range: [2, 4], area: 1, desc: 'A homemade wind bomb.' },
+  thunderhead: { name: 'Thunderhead Barrage', kind: 'damage', ult: true, cost: 100, power: 2.0, range: [2, 5], area: 2, desc: 'Every bomb in the backpack at once.' },
+  // Hana
+  emberFan: { name: 'Ember Fan', kind: 'damage', cost: 35, power: 1.4, range: [1, 3], area: 1, desc: 'A sweep of the fan scatters embers.' },
+  infernoWaltz: { name: 'Inferno Waltz', kind: 'damage', ult: true, cost: 100, power: 2.2, range: [1, 4], area: 2, desc: 'A fire dance that sets the field ablaze.' },
 };
+
+// Stat gain per level above 1 (heroes and enemies alike).
+export const GROWTH = { hp: 6, atk: 1.2, def: 0.8 };
+export const MAX_LEVEL = 20;
+export const XP_PER_LEVEL = 100;
 
 export const BASIC_ATTACK = { name: 'Attack', kind: 'damage', cost: 0, power: 1, area: 0 };
 
@@ -86,6 +103,34 @@ export const UNITS = {
     skills: ['nightFang'], ult: 'eclipseEdge',
     passive: { id: 'shadowStrike', name: 'Shadow Strike', desc: 'Backstabs deal ×2 damage instead of ×1.5.' },
     look: { art: 'nyx', skin: '#d9b9a6', hair: '#e8e8f0', hairStyle: 'hood', outfit: '#1d1a2b', accent: '#b06cff' },
+  },
+  aiko: {
+    name: 'Aiko', title: 'Lancer', aspect: 'lumen',
+    hp: 80, atk: 24, def: 12, mov: 5, jump: 2, range: [1, 2],
+    skills: ['starpierce'], ult: 'heavensLance',
+    passive: { id: 'dawnbreaker', name: 'Dawnbreaker', desc: 'Deals +25% damage to enemies that are at full HP.' },
+    look: { art: 'aiko', skin: '#f7d9c4', hair: '#ffd56b', outfit: '#f4f1ea', accent: '#ffe066' },
+  },
+  mako: {
+    name: 'Mako', title: 'Duelist', aspect: 'tide',
+    hp: 76, atk: 25, def: 11, mov: 5, jump: 2, range: [1, 1],
+    skills: ['riptideSlash'], ult: 'maelstromWaltz',
+    passive: { id: 'riposte', name: 'Riposte', desc: 'When an enemy hits him up close and he survives, he instantly strikes back.' },
+    look: { art: 'mako', skin: '#c68a5e', hair: '#1f3f6b', outfit: '#1f7a8c', accent: '#f4c95d' },
+  },
+  pip: {
+    name: 'Pip', title: 'Tinker', aspect: 'gale',
+    hp: 56, atk: 21, def: 7, mov: 6, jump: 3, range: [2, 3],
+    skills: ['gustBomb'], ult: 'thunderhead',
+    passive: { id: 'lightFeet', name: 'Light Feet', desc: 'Can walk straight through enemies (but not stop on them).' },
+    look: { art: 'pip', skin: '#f2c6a0', hair: '#8a5a2b', outfit: '#4f8a3a', accent: '#ffd23f' },
+  },
+  hana: {
+    name: 'Hana', title: 'Fan Dancer', aspect: 'blaze',
+    hp: 58, atk: 23, def: 7, mov: 5, jump: 2, range: [1, 3],
+    skills: ['emberFan'], ult: 'infernoWaltz',
+    passive: { id: 'siblingBond', name: 'Sibling Bond', desc: 'Hana and Kai each deal +20% damage while standing next to each other.' },
+    look: { art: 'hana', skin: '#f6d3b8', hair: '#ff5a2a', outfit: '#d6283b', accent: '#ffd23f' },
   },
 
   varg: {

@@ -13,7 +13,11 @@ own characters, world and story. See **[DESIGN.md](DESIGN.md)** for the full pla
 
 > Sound on iPhone: flip the silent switch off — Safari mutes web audio in silent mode.
 
-## How to play (v0)
+## How to play
+- **Play** opens the campaign. Clear stages in order — each one unlocks the next.
+- Before each fight, pick up to 5 heroes. Heroes earn **XP** and **level up** when you win;
+  new heroes join as the story goes on. Replay cleared stages to grind (60% XP).
+- Too hard? Switch **Difficulty** to Easy in Settings. Want pain? Hard.
 - **Tap** one of your fighters → blue tiles show where they can move. Tap a tile to move.
 - Pick **Attack**, a **Skill** (costs SP) or your **★ Ultimate** (at 100 SP), then tap a red target.
 - A forecast shows the exact damage. Tap the target again (or **Confirm**) to strike.

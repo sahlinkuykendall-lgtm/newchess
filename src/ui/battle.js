@@ -20,10 +20,12 @@ export class Battle {
   }
 
   // ---------------------------------------------------------------- setup
-  async start(level) {
+  async start(level, { squad = null, difficulty = 'normal' } = {}) {
     const gen = ++this.gen;
     this.level = level;
-    this.state = R.createBattle(level);
+    this.state = R.createBattle(level, { squad, difficulty });
+    this.squadIds = R.livingUnits(this.state, 'hero').map(u => u.templateId);
+    $('result').classList.add('hidden');
     this.board.setState(this.state);
     this.board.focusUnits(R.livingUnits(this.state, 'hero'), { animate: false, zoom: this.board.playZoom() });
     this.sel = null;
@@ -257,10 +259,10 @@ export class Battle {
 
     for (const e of plan.events) {
       const t = R.unitById(this.state, e.targetId);
-      if (e.assist) {
+      if (e.assist || e.counter) {
         const helper = R.unitById(this.state, e.sourceId);
         helper.facing = R.dirToward(helper, t) ?? helper.facing;
-        b.floatText(helper, 'COMBO!', '#e3b5ff');
+        b.floatText(helper, e.counter ? 'RIPOSTE!' : 'COMBO!', e.counter ? '#7fd8ff' : '#e3b5ff');
         await b.lunge(helper, t);
       }
       R.applyEvent(this.state, e);
@@ -418,14 +420,7 @@ export class Battle {
     await this.board.wait(500);
     audio.stop();
     audio.sfx(result);
-    const title = $('result-title');
-    title.textContent = result === 'victory' ? 'VICTORY!' : 'DEFEAT';
-    title.className = result;
-    const alive = R.livingUnits(this.state, 'hero').length;
-    $('result-text').textContent = result === 'victory'
-      ? `Team Crimson Fang is out! ${alive}/5 of your squad standing after ${this.state.turn} turns.`
-      : 'Your squad was knocked out. Try leading with Goro and keeping Rin behind him.';
-    $('result').classList.remove('hidden');
+    this.onEnd?.(result, { level: this.level, squadIds: this.squadIds, state: this.state });
     return true;
   }
 
@@ -474,7 +469,7 @@ export class Battle {
     const enemy = u.team === 'enemy';
     const html = `
       <canvas id="uc-portrait"></canvas>
-      <div class="uc-name"><span class="n">${esc(u.name)}</span> <span class="uc-title">${esc(u.title)}</span>
+      <div class="uc-name"><span class="n">${esc(u.name)}</span> <span class="uc-lv">Lv ${u.lv}</span> <span class="uc-title">${esc(u.title)}</span>
         <span class="uc-aspect" style="background:${asp.color}">${asp.name}</span></div>
       <div class="bar hp ${enemy ? 'enemy' : ''}"><i style="width:${(u.hp / u.maxHp) * 100}%"></i><b>HP ${u.hp}/${u.maxHp}</b></div>
       <div class="bar sp ${u.sp >= 100 ? 'full' : ''}"><i style="width:${u.sp}%"></i><b>SP ${u.sp}${u.sp >= 100 ? ' · ULTIMATE READY' : ''}</b></div>

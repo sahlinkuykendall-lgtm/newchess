@@ -1,5 +1,5 @@
 // Pure game rules. No DOM access here so it can be unit-tested in Node.
-import { UNITS, SKILLS, BASIC_ATTACK, aspectMult } from './data.js';
+import { UNITS, SKILLS, BASIC_ATTACK, GROWTH, aspectMult } from './data.js';
 
 export const DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
 export const SP_MAX = 100;
@@ -17,16 +17,33 @@ export const BURNING_SPIRIT_SP = 5;
 export const TIDAL_GRACE_HEAL = 6;
 export const BLOODLUST_HEAL = 15;
 export const SLUDGE_RANGED = 0.75;
+export const DAWNBREAKER = 1.25;
+export const RIPOSTE_POWER = 0.6;
+export const SIBLING_BOND = 1.2;
+export const DIFFICULTY = { easy: 0.85, normal: 1, hard: 1.15 };
 
-const IMPASSABLE = new Set(['water', 'pillar', 'tree', 'rock']);
+const IMPASSABLE = new Set(['water', 'pillar', 'tree', 'rock', 'obsidian', 'boulder']);
 
 export const key = (r, c) => `${r},${c}`;
 export const manhattan = (a, b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
 
 let nextId = 1;
 
-export function createUnit(templateId, team, r, c, facing) {
+// Stats at a given level: base + growth per level, then a difficulty multiplier
+// on HP/ATK (enemies only).
+export function statsAt(templateId, lv = 1, mult = 1) {
   const t = UNITS[templateId];
+  const g = lv - 1;
+  return {
+    hp: Math.round((t.hp + GROWTH.hp * g) * mult),
+    atk: Math.round((t.atk + GROWTH.atk * g) * mult),
+    def: Math.round(t.def + GROWTH.def * g),
+  };
+}
+
+export function createUnit(templateId, team, r, c, facing, { lv = 1, mult = 1 } = {}) {
+  const t = UNITS[templateId];
+  const st = statsAt(templateId, lv, mult);
   return {
     id: `${templateId}-${nextId++}`,
     templateId,
@@ -35,10 +52,11 @@ export function createUnit(templateId, team, r, c, facing) {
     title: t.title,
     aspect: t.aspect,
     look: t.look,
-    maxHp: t.hp,
-    hp: t.hp,
-    atk: t.atk,
-    def: t.def,
+    lv,
+    maxHp: st.hp,
+    hp: st.hp,
+    atk: st.atk,
+    def: st.def,
     mov: t.mov,
     jump: t.jump,
     range: t.range,
@@ -58,11 +76,18 @@ export function createUnit(templateId, team, r, c, facing) {
   };
 }
 
-export function createBattle(level) {
+// squad: [{ id, lv }] placed on the level's spawn tiles in order.
+// Defaults to the level's suggested party at its suggested level (used by tests).
+export function createBattle(level, { squad = null, difficulty = 'normal' } = {}) {
   const tiles = level.tiles.map(row => row.map(t => (t ? { ...t } : null)));
+  const party = squad ?? level.party.map(id => ({ id, lv: level.heroLevel ?? 1 }));
+  const mult = DIFFICULTY[difficulty] ?? 1;
   const units = [
-    ...level.heroes.map(s => createUnit(s.id, 'hero', s.r, s.c, s.facing)),
-    ...level.enemies.map(s => Object.assign(createUnit(s.id, 'enemy', s.r, s.c, s.facing), s.ai ? { ai: s.ai, aggro: s.aggro ?? 6 } : {})),
+    ...party.slice(0, level.spawns.length).map((h, i) =>
+      createUnit(h.id, 'hero', level.spawns[i].r, level.spawns[i].c, level.spawns[i].facing, { lv: h.lv })),
+    ...level.enemies.map(s => Object.assign(
+      createUnit(s.id, 'enemy', s.r, s.c, s.facing, { lv: s.lv ?? 1, mult: mult * (s.mult ?? 1) }),
+      s.ai ? { ai: s.ai, aggro: s.aggro ?? 6 } : {})),
   ];
   return { map: { rows: tiles.length, cols: tiles[0].length, tiles }, units, phase: 'hero', turn: 1 };
 }
@@ -100,7 +125,7 @@ export function reachable(state, unit) {
       const t = tileAt(state, r, c);
       if (!isPassable(t, unit) || Math.abs(t.h - here.h) > unit.jump) continue;
       const occ = unitAt(state, r, c);
-      if (occ && occ.team !== unit.team) continue;
+      if (occ && occ.team !== unit.team && unit.passive !== 'lightFeet') continue;
       const node = { r, c, cost: n.cost + 1, prev: n, blocked: !!occ };
       nodes.set(k, node);
       queue.push(node);
@@ -231,12 +256,21 @@ export function isBehind(from, target) {
   return dot < 0 && -dot >= cross;
 }
 
-export function hitDamage(attacker, defender, power, { pierce = false, from = attacker } = {}) {
+// Kai and Hana hit harder standing next to each other (Hana's Sibling Bond).
+export function bondBonus(state, unit) {
+  const partner = { kai: 'hana', hana: 'kai' }[unit.templateId];
+  if (!partner) return 1;
+  const p = state.units.find(u => u.alive && u.team === unit.team && u.templateId === partner && manhattan(u, unit) === 1);
+  return p && (unit.passive === 'siblingBond' || p.passive === 'siblingBond') ? SIBLING_BOND : 1;
+}
+
+export function hitDamage(attacker, defender, power, { pierce = false, from = attacker, defHp = defender.hp, mult = 1 } = {}) {
   const aspect = aspectMult(attacker.aspect, defender.aspect);
   const back = isBehind(from, defender) && defender.passive !== 'bedrock';
   const sludge = defender.passive === 'sludgeBody' && manhattan(from, defender) > 1 ? SLUDGE_RANGED : 1;
   const base = attacker.atk * power - (pierce ? 0 : defender.def);
-  const amount = Math.max(1, Math.round(base * aspect * sludge * (back ? attacker.backstab : 1)));
+  const dawn = attacker.passive === 'dawnbreaker' && defHp >= defender.maxHp ? DAWNBREAKER : 1;
+  const amount = Math.max(1, Math.round(base * aspect * sludge * dawn * mult * (back ? attacker.backstab : 1)));
   return { amount, aspect, back };
 }
 
@@ -259,8 +293,9 @@ export function resolveAction(state, unit, action, target) {
     }
   } else {
     let dealt = false;
+    const bond = bondBonus(state, unit);
     for (const t of targets) {
-      const h = hitDamage(unit, t, action.power, { pierce: action.pierce });
+      const h = hitDamage(unit, t, action.power, { pierce: action.pierce, defHp: hp.get(t.id), mult: bond });
       const amount = Math.min(h.amount, hp.get(t.id));
       hp.set(t.id, hp.get(t.id) - amount);
       dealt = true;
@@ -285,8 +320,18 @@ export function resolveAction(state, unit, action, target) {
         events.push({ type: 'hit', assist: true, sourceId: a.id, targetId: t.id, amount, back: false, aspect: aspectMult(a.aspect, t.aspect), ko: hp.get(t.id) <= 0 });
       }
     }
+    // Mako's Riposte: survive a close-range single hit and strike back.
+    if (action.area === 0 && targets.length === 1) {
+      const t = targets[0];
+      if (t.passive === 'riposte' && hp.get(t.id) > 0 && manhattan(unit, t) === 1 && hp.get(unit.id) > 0) {
+        const raw = t.atk * RIPOSTE_POWER - unit.def * 0.5;
+        const amount = Math.min(Math.max(1, Math.round(raw * aspectMult(t.aspect, unit.aspect))), hp.get(unit.id));
+        hp.set(unit.id, hp.get(unit.id) - amount);
+        events.push({ type: 'hit', counter: true, sourceId: t.id, targetId: unit.id, amount, back: false, aspect: aspectMult(t.aspect, unit.aspect), ko: hp.get(unit.id) <= 0 });
+      }
+    }
     // Varg's Bloodlust: a knockout heals him.
-    if (unit.passive === 'bloodlust' && events.some(e => e.ko) && hp.get(unit.id) < unit.maxHp) {
+    if (unit.passive === 'bloodlust' && hp.get(unit.id) > 0 && events.some(e => e.ko && e.targetId !== unit.id) && hp.get(unit.id) < unit.maxHp) {
       const amount = Math.min(BLOODLUST_HEAL, unit.maxHp - hp.get(unit.id));
       hp.set(unit.id, hp.get(unit.id) + amount);
       events.push({ type: 'heal', passive: 'bloodlust', sourceId: unit.id, targetId: unit.id, amount });

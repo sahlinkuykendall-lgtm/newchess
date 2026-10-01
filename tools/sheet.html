@@ -5,7 +5,7 @@
 import { drawCharacter } from '../src/render/sprites.js';
 import { UNITS } from '../src/game/data.js';
 const ctx = document.getElementById('c').getContext('2d');
-const ids = ['kai', 'goro', 'rin', 'sora', 'nyx', 'varg', 'imp', 'brute', 'gargoyle'];
+const ids = (new URLSearchParams(location.search).get('ids') || 'kai,goro,rin,sora,nyx,varg,imp,brute,gargoyle').split(',');
 const t = Number(new URLSearchParams(location.search).get('t') || 1000);
 ids.forEach((id, i) => {
   for (const [row, facing] of [[0, { dr: 0, dc: 1 }], [1, { dr: -1, dc: 0 }]]) {
