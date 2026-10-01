@@ -30,7 +30,7 @@ function moveRow(skill, kind) {
   const extra = [skill.kind === 'heal' ? 'heal' : `power ×${skill.power}`, skill.pierce ? 'ignores DEF' : ''].filter(Boolean).join(' · ');
   return `<div class="pf-move ${kind}">
     <div class="pf-move-head"><b>${kind === 'ult' ? '★ ' : ''}${esc(skill.name)}</b><span>${cost}</span></div>
-    <div class="pf-move-meta">Range ${rangeText(skill.range)}${area} · ${extra}</div>
+    <div class="pf-move-meta">⌖ Reach ${skill.range[1] === 0 ? 'self' : `${rangeText(skill.range)} tile${skill.range[1] > 1 ? 's' : ''}`}${area} · ${extra}</div>
     <div class="pf-move-desc">${esc(skill.desc)}</div>
   </div>`;
 }
@@ -73,7 +73,7 @@ export function openProfile(id, unit = null) {
           ${statBar('DEF', t.def, STAT_MAX.def)}
           ${statBar('MOV', t.mov, STAT_MAX.mov)}
           ${statBar('JUMP', Math.min(t.jump, 5), STAT_MAX.jump, t.flier ? 'Flies' : t.jump)}
-          ${statBar('RANGE', t.range[1], 5, rangeText(t.range))}
+          ${statBar('REACH', t.range[1], 5, rangeText(t.range))}
         </div>
 
         <div class="pf-section">Moves</div>

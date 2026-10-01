@@ -436,13 +436,19 @@ export class Battle {
   renderOverlays() {
     const ov = new Map();
     const set = (list, type) => list.forEach(t => ov.set(R.key(t.r, t.c), type));
-    if (this.mode === 'selected' && this.sel && !this.sel.moved) {
-      set([...this.nodes.values()].filter(n => !n.blocked && n.cost > 0), 'move');
+    if (this.mode === 'selected' && this.sel) {
+      // Red fringe: everywhere this unit could attack (after moving, if it still can).
+      const from = this.sel.moved ? new Map([[R.key(this.sel.r, this.sel.c), { r: this.sel.r, c: this.sel.c }]]) : this.nodes;
+      set(R.threatTiles(this.state, this.sel, from), 'reach');
+      if (!this.sel.moved) set([...this.nodes.values()].filter(n => !n.blocked), 'move');
     }
     if (this.mode === 'target' && this.action) {
       set(R.rangeTiles(this.state, this.sel, this.sel, this.action), 'range');
       set(this.targets, this.action.kind === 'heal' ? 'heal' : 'target');
-      if (this.pending) set(R.areaTiles(this.state, this.pending.target, this.action.area), 'area');
+      if (this.pending) {
+        if (this.action.area > 0) set(R.areaTiles(this.state, this.pending.target, this.action.area), 'area');
+        set([this.pending.target], this.action.kind === 'heal' ? 'heal' : 'target');
+      }
     }
     if ((this.mode === 'idle' || this.mode === 'selected') && this.inspect?.team === 'enemy') {
       const zone = [...R.reachable(this.state, this.inspect).values()].filter(n => !n.blocked);
@@ -474,7 +480,7 @@ export class Battle {
       <div class="bar hp ${enemy ? 'enemy' : ''}"><i style="width:${(u.hp / u.maxHp) * 100}%"></i><b>HP ${u.hp}/${u.maxHp}</b></div>
       <div class="bar sp ${u.sp >= 100 ? 'full' : ''}"><i style="width:${u.sp}%"></i><b>SP ${u.sp}${u.sp >= 100 ? ' · ULTIMATE READY' : ''}</b></div>
       <div class="uc-info">ⓘ</div>
-      <div class="uc-stats"><span>ATK <b>${u.atk}</b></span><span>DEF <b>${u.def}</b></span><span>MOV <b>${u.mov}</b></span><span>JMP <b>${u.jump}</b></span><span>RNG <b>${u.range[0]}-${u.range[1]}</b></span></div>`;
+      <div class="uc-stats"><span>ATK <b>${u.atk}</b></span><span>DEF <b>${u.def}</b></span><span>MOV <b>${u.mov}</b></span><span>JMP <b>${u.jump}</b></span><span>REACH <b>${u.range[0] === u.range[1] ? u.range[1] : `${u.range[0]}–${u.range[1]}`}</b></span></div>`;
     const sameUnit = this.cardUnitId === u.id;
     const old = sameUnit ? card.querySelector('#uc-portrait') : null;
     card.innerHTML = html;
@@ -488,23 +494,35 @@ export class Battle {
     const u = this.sel;
     if (!u || !(this.mode === 'selected' || this.mode === 'target')) { el.classList.add('hidden'); return; }
     el.classList.remove('hidden');
-    const btn = (id, label, sub, { disabled = false, cls = '' } = {}) =>
-      `<button class="act ${cls} ${this.action?.id === id ? 'active' : ''}" data-act="${id}" ${disabled ? 'disabled' : ''}>${esc(label)}<small>${esc(sub)}</small></button>`;
+    const btn = (id, label, sub, { disabled = false, cls = '', meta = '' } = {}) =>
+      `<button class="act ${cls} ${this.action?.id === id ? 'active' : ''}" data-act="${id}" ${disabled ? 'disabled' : ''}>` +
+      `<span class="act-main"><span>${esc(label)}</span><small>${esc(sub)}</small></span>${meta ? `<span class="act-meta">${meta}</span>` : ''}</button>`;
+    const meta = a => this.reachMeta(u, a);
     const parts = [];
     const atk = R.getAction(u, 'attack');
-    parts.push(btn('attack', 'Attack', R.validTargets(this.state, u, u, atk).length ? 'ready' : 'no target', { disabled: !R.validTargets(this.state, u, u, atk).length }));
+    const atkOk = R.validTargets(this.state, u, u, atk).length > 0;
+    parts.push(btn('attack', 'Attack', atkOk ? 'Free' : 'no target', { disabled: !atkOk, meta: meta(atk) }));
     for (const id of u.skills) {
       const a = R.getAction(u, id);
       const none = !R.validTargets(this.state, u, u, a).length;
-      parts.push(btn(id, a.name, `${a.cost} SP`, { disabled: u.sp < a.cost || none }));
+      parts.push(btn(id, a.name, none ? 'no target' : `${a.cost} SP`, { disabled: u.sp < a.cost || none, meta: meta(a) }));
     }
     if (u.ult) {
       const a = R.getAction(u, u.ult);
       const none = !R.validTargets(this.state, u, u, a).length;
-      parts.push(btn(u.ult, `★ ${a.name}`, u.sp >= 100 ? 'ULT' : `${u.sp}/100`, { disabled: u.sp < 100 || none, cls: u.sp >= 100 && !none ? 'ult' : '' }));
+      parts.push(btn(u.ult, `★ ${a.name}`, u.sp >= 100 ? (none ? 'no target' : 'READY') : `${u.sp}/100`, { disabled: u.sp < 100 || none, cls: u.sp >= 100 && !none ? 'ult' : '', meta: meta(a) }));
     }
     parts.push(`<div class="act-row">${btn('wait', 'Wait', '')}${btn('undo', 'Undo', '', { disabled: !u.moved })}</div>`);
     el.innerHTML = parts.join('');
+  }
+
+  // "⌖ Reach 2–4 tiles · Area 1" for an action from the unit's current tile.
+  reachMeta(u, a) {
+    const r = R.actionRange(this.state, u, u, a);
+    const bonus = r[1] > a.range[1] ? ' <em>+1 high ground</em>' : '';
+    const area = a.area > 0 ? ` · Area ${a.area}` : '';
+    const kind = a.kind === 'heal' ? ' · Heals' : '';
+    return `⌖ Reach ${R.rangeLabel(r)}${bonus}${area}${kind}`;
   }
 
   renderForecast() {
@@ -513,7 +531,7 @@ export class Battle {
     el.classList.remove('hidden');
     const a = this.action;
     if (!this.pending) {
-      el.innerHTML = `<div class="fc-title">${esc(a.name)}</div><div class="fc-hint">${esc(a.desc ?? 'Basic attack.')} Tap a highlighted target.</div>`;
+      el.innerHTML = `<div class="fc-title">${esc(a.name)}</div><div class="fc-reach">${this.reachMeta(this.sel, a)}</div><div class="fc-hint">${esc(a.desc ?? 'Basic attack.')} Tap a target marked with ⌖.</div>`;
       return;
     }
     const lines = this.pending.plan.events.map(e => {

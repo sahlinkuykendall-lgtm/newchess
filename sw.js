@@ -1,5 +1,5 @@
 // Network-first service worker: always fresh when online, still works offline.
-const CACHE = 'gambit-arena-v4';
+const CACHE = 'gambit-arena-v5';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'src/main.js', 'src/audio.js',

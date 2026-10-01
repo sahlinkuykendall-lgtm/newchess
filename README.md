@@ -22,6 +22,8 @@ own characters, world and story. See **[DESIGN.md](DESIGN.md)** for the full pla
 - Pick **Attack**, a **Skill** (costs SP) or your **★ Ultimate** (at 100 SP), then tap a red target.
 - A forecast shows the exact damage. Tap the target again (or **Confirm**) to strike.
 - **Undo** a move before you act. **Wait** to end that unit's turn. **End Turn** when you're done.
+- Highlights: **blue** = where you can move, **red dashed** = where you could attack, **⌖** = targets in reach now.
+- Every Attack/Skill/Ultimate button shows its **Reach** in tiles and its **Area**.
 - Tap an enemy to see its stats and the purple zone it can reach next turn.
 - Tap the unit card (ⓘ) for a full profile: story, passive ability and every move.
 - **Characters** on the title screen shows the whole roster.

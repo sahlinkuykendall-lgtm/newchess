@@ -189,6 +189,24 @@ export function actionRange(state, unit, from, action) {
   return [min, max];
 }
 
+// Human-readable reach, e.g. "1 tile", "2–4 tiles", "Self".
+export function rangeLabel([min, max]) {
+  if (max === 0) return 'Self';
+  if (min === max) return `${max} tile${max > 1 ? 's' : ''}`;
+  return `${min}–${max} tiles`;
+}
+
+// Every tile the unit could hit with `actionId` after moving anywhere in `nodes`.
+export function threatTiles(state, unit, nodes, actionId = 'attack') {
+  const action = getAction(unit, actionId);
+  const out = new Map();
+  for (const n of nodes.values()) {
+    if (n.blocked) continue;
+    for (const t of rangeTiles(state, unit, n, action)) out.set(key(t.r, t.c), t);
+  }
+  return [...out.values()];
+}
+
 export function rangeTiles(state, unit, from, action) {
   const [min, max] = actionRange(state, unit, from, action);
   const out = [];

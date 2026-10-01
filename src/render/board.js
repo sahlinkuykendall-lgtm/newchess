@@ -24,15 +24,18 @@ const PALETTE = {
 const GROUND = { tree: 'grass', rock: 'grass', obsidian: 'dirt', boulder: 'stone' };
 const TALL = new Set(['pillar', 'tree']);
 
+// Tile highlights: fill, outline color, dashed outline, icon, pulse.
 const OVERLAY = {
-  move: ['rgba(60,140,255,0.5)', 'rgba(170,215,255,0.95)'],
-  danger: ['rgba(190,90,255,0.28)', 'rgba(210,150,255,0.7)'],
-  range: ['rgba(255,80,80,0.22)', 'rgba(255,120,120,0.6)'],
-  target: ['rgba(255,70,70,0.5)', 'rgba(255,200,200,1)'],
-  heal: ['rgba(80,255,170,0.35)', 'rgba(150,255,210,0.9)'],
-  area: ['rgba(255,170,40,0.55)', 'rgba(255,230,160,1)'],
-  path: ['rgba(255,255,255,0.25)', 'rgba(255,255,255,0.6)'],
+  move: { fill: 'rgba(30,110,255,0.45)', edge: '#9fd6ff' },
+  reach: { fill: 'rgba(255,55,55,0.22)', edge: '#ff6b6b', dashed: true },
+  danger: { fill: 'rgba(170,70,255,0.30)', edge: '#d3a6ff', dashed: true },
+  range: { fill: 'rgba(255,85,55,0.30)', edge: '#ff8a65' },
+  target: { fill: 'rgba(255,35,60,0.58)', edge: '#ffffff', icon: 'cross', pulse: true },
+  heal: { fill: 'rgba(40,230,140,0.48)', edge: '#c6ffe2', icon: 'plus', pulse: true },
+  area: { fill: 'rgba(255,170,40,0.62)', edge: '#ffe7a3', pulse: true },
 };
+// Grid neighbours for each diamond edge: [dr, dc, cornerA, cornerB]
+const EDGES = [[-1, 0, 'T', 'R'], [0, 1, 'R', 'B'], [1, 0, 'B', 'L'], [0, -1, 'L', 'T']];
 
 const easeOut = t => 1 - (1 - t) ** 3;
 
@@ -467,15 +470,59 @@ export class Board {
     }
 
     const ov = this.overlays.get(`${r},${c}`);
-    if (ov) {
-      const [fill, stroke] = OVERLAY[ov];
-      const inset = 3;
-      ctx.beginPath();
-      ctx.moveTo(T.x, T.y + inset / 2); ctx.lineTo(R.x - inset, R.y); ctx.lineTo(B.x, B.y - inset / 2); ctx.lineTo(L.x + inset, L.y); ctx.closePath();
-      const pulse = ov === 'target' || ov === 'area' ? 0.75 + 0.25 * Math.sin(this.time / 150) : 1;
-      ctx.globalAlpha = pulse * fade;
-      ctx.fillStyle = fill; ctx.fill();
-      ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke();
+    if (ov) this.drawOverlay(r, c, p, ov, fade);
+    ctx.globalAlpha = 1;
+  }
+
+  // A highlighted tile: solid fill, faint grid line, and a bold outline only on
+  // the outside edges of each highlighted region so areas read clearly.
+  drawOverlay(r, c, p, type, fade) {
+    const { ctx } = this;
+    const o = OVERLAY[type];
+    const pulse = o.pulse ? 0.78 + 0.22 * Math.sin(this.time / 150) : 1;
+    const k = 0.9; // outline sits just inside the tile so tiles in front don't cover it
+    const P = {
+      T: { x: p.x, y: p.y - TH / 2 }, R: { x: p.x + TW / 2, y: p.y },
+      B: { x: p.x, y: p.y + TH / 2 }, L: { x: p.x - TW / 2, y: p.y },
+    };
+    const I = Object.fromEntries(Object.entries(P).map(([n, q]) => [n, { x: p.x + (q.x - p.x) * k, y: p.y + (q.y - p.y) * k }]));
+    ctx.globalAlpha = pulse * fade;
+    ctx.beginPath();
+    ctx.moveTo(P.T.x, P.T.y); ctx.lineTo(P.R.x, P.R.y); ctx.lineTo(P.B.x, P.B.y); ctx.lineTo(P.L.x, P.L.y); ctx.closePath();
+    ctx.fillStyle = o.fill; ctx.fill();
+    ctx.globalAlpha = 0.35 * fade;
+    ctx.strokeStyle = o.edge; ctx.lineWidth = 1; ctx.stroke();
+    ctx.globalAlpha = fade;
+    // outer boundary
+    const outer = EDGES.filter(([dr, dc]) => this.overlays.get(`${r + dr},${c + dc}`) !== type);
+    if (outer.length) {
+      ctx.lineCap = 'round';
+      ctx.setLineDash(o.dashed ? [5, 4] : []);
+      for (const [w, col] of [[5, 'rgba(10,8,20,0.55)'], [2.6, o.edge]]) {
+        ctx.beginPath();
+        for (const [, , a, b] of outer) { ctx.moveTo(I[a].x, I[a].y); ctx.lineTo(I[b].x, I[b].y); }
+        ctx.lineWidth = w; ctx.strokeStyle = col; ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+    // icons
+    if (o.icon) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.scale(1, 0.5);
+      ctx.lineCap = 'round';
+      for (const [w, col] of [[4.5, 'rgba(10,8,20,0.6)'], [2, '#ffffff']]) {
+        ctx.beginPath();
+        if (o.icon === 'cross') {
+          ctx.arc(0, 0, 9, 0, Math.PI * 2);
+          ctx.moveTo(-14, 0); ctx.lineTo(-5, 0); ctx.moveTo(5, 0); ctx.lineTo(14, 0);
+          ctx.moveTo(0, -14); ctx.lineTo(0, -5); ctx.moveTo(0, 5); ctx.lineTo(0, 14);
+        } else {
+          ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.moveTo(0, -7); ctx.lineTo(0, 7);
+        }
+        ctx.lineWidth = w; ctx.strokeStyle = col; ctx.stroke();
+      }
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
   }
