@@ -114,19 +114,41 @@ A street brawler named **Kai** gets dragged in as a last-minute substitute.
 ## Campaign & progression (v0.4)
 Board 1 — **Proving Grounds** — is five stages with a steady difficulty ramp:
 
-| Stage | Map | Enemies | Suggested Lv | Teaches | Joins after |
-|-------|-----|---------|--------------|---------|-------------|
-| 1-1 | Training Yard (16×16) | 2 imps, 1 brute (weakened) | 1 | Backstab + combo tips | Nyx |
-| 1-2 | Windmill Hills (18×18) | 2 gargoyles, 2 imps, 1 brute | 2 | High ground, fliers | Aiko, Pip |
-| 1-3 | Ember Pits (18×18) | 3 imps, 1 gargoyle, 1 brute | 3 | Lava, Fireborn | Hana |
-| 1-4 | Mirewood (18×20) | 2 brutes, 2 gargoyles, 1 imp | 4 | Bridges, Sludge Body | Mako |
-| 1-5 👑 | Ruins of Ash (20×20) | Varg + 5 elites | 5 | Boss fortress | — |
+| Stage | Map | Enemies (level) | Suggested Lv | Teaches | Joins after |
+|-------|-----|-----------------|--------------|---------|-------------|
+| 1-1 | Training Yard (16×16) | 2 imps, 1 brute (1) | 1 | Backstab + combo tips | Nyx |
+| 1-2 | Windmill Hills (18×18) | 2 gargoyles, 3 imps, 1 brute (2–3) | 2 | High ground, fliers | Aiko, Pip |
+| 1-3 | Ember Pits (18×18) | 3 imps, 2 gargoyles, 1 brute (4–5) | 3 | Lava, Fireborn | Hana |
+| 1-4 | Mirewood (18×20) | 2 brutes, 2 gargoyles, 2 imps (5) | 4 | Bridges, Sludge Body | Mako |
+| 1-5 👑 | Ruins of Ash (20×20) | Varg (7) + 6 elites (5–6) | 5 | Boss fortress — expect to grind | — |
 
+### Enemy AI
+Enemies score every move/attack they could make and pick the best. They favour knockouts,
+finishing wounded heroes and hitting fragile backliners (healers, archers), and avoid attacks
+that would get them killed by Mako's Riposte. Behaviours per enemy:
+- **charge** — head straight for the nearest hero (gargoyles).
+- **hold** — wait as a pack; once any member spots a hero or is hit, the whole pack attacks together.
+- **guard** — stay at a post (walls, gates) until a hero comes close or it gets hurt.
+
+### Measured difficulty
+Each stage is simulated 48× with random squads, with the enemy AI also playing your side
+(a decent-but-not-clever "average player"). Win rates at the suggested level:
+
+| | 1-1 | 1-2 | 1-3 | 1-4 | 1-5 | 1-5 at +1 / +2 Lv |
+|---|---|---|---|---|---|---|
+| Easy | 100% | 100% | 100% | 100% | 77% | 98% / 96% |
+| **Normal** | 100% | 75% | 77% | 73% | 10% | 35% / 60% |
+| Hard | 100% | 13% | 15% | 15% | 0% | 0% / 17% |
+
+So on Normal the middle stages are close fights (usually 1–2 heroes left standing) and the boss
+needs grinding a level or two — or sharp tactics. A thoughtful human beats the simulated player.
+
+### Progression rules
 - You start with **Kai, Goro, Rin, Sora**; the squad grows to 9 heroes. Pick up to 5 per battle.
 - **XP:** every hero who fought gets the stage's XP (100–150) on a win; 100 XP = 1 level. Replays give 60%.
+- New recruits join at the next stage's suggested level.
 - **Growth per level:** +6 HP, +1.2 ATK, +0.8 DEF (enemies use the same table, so enemy "Lv" is comparable).
 - **Difficulty:** Easy ×0.85 / Normal ×1 / Hard ×1.15 enemy HP & ATK.
-- Balance is checked by simulating every stage with the game's own AI playing your side at the suggested level.
 - Progress saves on the device (Settings → Reset Progress to start over).
 
 ## Characters

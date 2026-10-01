@@ -89,7 +89,7 @@ export function createBattle(level, { squad = null, difficulty = 'normal' } = {}
       createUnit(s.id, 'enemy', s.r, s.c, s.facing, { lv: s.lv ?? 1, mult: mult * (s.mult ?? 1) }),
       s.ai ? { ai: s.ai, aggro: s.aggro ?? 6 } : {})),
   ];
-  return { map: { rows: tiles.length, cols: tiles[0].length, tiles }, units, phase: 'hero', turn: 1 };
+  return { map: { rows: tiles.length, cols: tiles[0].length, tiles }, units, phase: 'hero', turn: 1, alert: false };
 }
 
 export function tileAt(state, r, c) {

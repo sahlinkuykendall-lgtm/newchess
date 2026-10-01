@@ -51,6 +51,10 @@ export function awardVictory(save, level, squadIds) {
   }
   const joined = firstClear ? (level.joins ?? []).filter(id => !save.unlocked.includes(id)) : [];
   save.unlocked.push(...joined);
+  // Recruits arrive ready for the next stage instead of at level 1.
+  const nextLevel = LEVELS[LEVELS.indexOf(level) + 1];
+  const joinLv = nextLevel?.heroLevel ?? (level.heroLevel ?? 1) + 1;
+  for (const id of joined) if (!save.heroes[id]) save.heroes[id] = { lv: joinLv, xp: 0 };
   save.cleared[level.id] = true;
   save.lastSquad = squadIds;
   writeSave(save);

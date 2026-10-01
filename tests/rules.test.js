@@ -245,3 +245,32 @@ test('new passives: Dawnbreaker, Riposte, Light Feet, Sibling Bond', () => {
   hana.r = 0;
   assert.equal(bondBonus(s3, kai), 1);
 });
+
+test('AI packs hold until one spots a hero, then all attack', () => {
+  const tiles = flat(3, 20);
+  const kai = createUnit('kai', 'hero', 1, 0);
+  const a = Object.assign(createUnit('imp', 'enemy', 1, 10), { ai: 'hold', aggro: 4 });
+  const b = Object.assign(createUnit('imp', 'enemy', 1, 18), { ai: 'hold', aggro: 4 });
+  const s = { ...battle([kai, a, b], tiles), alert: false };
+  assert.deepEqual(planTurn(s, a).dest, { r: 1, c: 10 }, 'nobody spotted yet: hold');
+  kai.c = 7; // now within a's aggro
+  planTurn(s, a);
+  assert.equal(s.alert, true);
+  assert.notDeepEqual(planTurn(s, b).dest, { r: 1, c: 18 }, 'the rest of the pack moves in');
+});
+
+test('AI prefers knockouts and fragile targets', () => {
+  const imp = createUnit('imp', 'enemy', 2, 2);
+  const goro = createUnit('goro', 'hero', 2, 4);
+  const rin = createUnit('rin', 'hero', 4, 2);
+  rin.hp = 10;
+  const s = battle([imp, goro, rin]);
+  const p = planTurn(s, imp);
+  assert.ok(p.target && Math.abs(p.target.r - rin.r) + Math.abs(p.target.c - rin.c) <= 1, 'goes for the wounded healer');
+});
+
+test('recruits join at the next stage’s suggested level', () => {
+  const save = newSave();
+  awardVictory(save, LEVELS[0], ['kai']);
+  assert.equal(save.heroes.nyx.lv, LEVELS[1].heroLevel);
+});
