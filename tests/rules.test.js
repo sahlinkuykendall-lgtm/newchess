@@ -274,3 +274,15 @@ test('recruits join at the next stage’s suggested level', () => {
   awardVictory(save, LEVELS[0], ['kai']);
   assert.equal(save.heroes.nyx.lv, LEVELS[1].heroLevel);
 });
+
+test('version and offline file lists stay in sync', async () => {
+  const fs = await import('node:fs');
+  const { VERSION, ASSETS } = await import('../src/version.js');
+  assert.equal(JSON.parse(fs.readFileSync('version.json', 'utf8')).version, VERSION, 'version.json matches src/version.js');
+  const sw = fs.readFileSync('sw.js', 'utf8');
+  const shell = sw.slice(sw.indexOf('const SHELL = ['), sw.indexOf('];', sw.indexOf('const SHELL'))).match(/'[^']+'/g).map(x => x.slice(1, -1));
+  assert.deepEqual([...shell].sort(), [...ASSETS].sort(), 'sw.js SHELL matches ASSETS');
+  for (const f of ASSETS.filter(a => a !== './')) assert.ok(fs.existsSync(f), `${f} exists`);
+  const srcFiles = fs.readdirSync('src', { recursive: true }).filter(f => f.endsWith('.js')).map(f => `src/${f}`);
+  for (const f of srcFiles) assert.ok(ASSETS.includes(f), `${f} is listed for offline use`);
+});

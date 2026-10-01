@@ -13,6 +13,15 @@ own characters, world and story. See **[DESIGN.md](DESIGN.md)** for the full pla
 
 > Sound on iPhone: flip the silent switch off — Safari mutes web audio in silent mode.
 
+### Updating
+The app checks for a new version every time you open it and shows an **Update** banner.
+You can also go to **Settings → Force update** (or tap the version number on the title
+screen). Force update re-downloads the whole game and keeps your progress.
+Note: a Home Screen app has its own storage — clearing Safari's data does not affect it.
+
+**Shipping an update (for developers):** bump `VERSION` in `src/version.js` *and* `version.json`
+(a test checks they match), then push to `main`.
+
 ## How to play
 - **Play** opens the campaign. Clear stages in order — each one unlocks the next.
 - Before each fight, pick up to 5 heroes. Heroes earn **XP** and **level up** when you win;

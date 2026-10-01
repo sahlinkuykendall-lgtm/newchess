@@ -30,8 +30,15 @@
       <button id="btn-title-settings" class="btn ghost">Settings</button>
     </div>
     <p class="hint">Tip: on iPhone, tap Share → <b>Add to Home Screen</b> for full-screen play.</p>
-    <p class="version">v0.5 · Tougher enemies</p>
+    <p class="version" id="app-version"></p>
   </section>
+
+  <!-- Update banner -->
+  <div id="update-banner" class="hidden">
+    <span id="update-text">A new version is ready.</span>
+    <button id="btn-update-now" class="btn small">Update</button>
+    <button id="btn-update-later" class="icon-btn" aria-label="Later">✕</button>
+  </div>
 
   <!-- Campaign: stage select -->
   <section id="campaign" class="screen panel-screen hidden">
@@ -133,6 +140,12 @@
           <option value="1.6">Fast</option>
         </select>
       </label>
+      <div class="row">Version <span id="set-version" class="muted-val"></span></div>
+      <div class="update-row">
+        <button id="btn-check-update" class="btn small ghost">Check for updates</button>
+        <button id="btn-force-update" class="btn small">Force update</button>
+      </div>
+      <p class="update-note">Force update re-downloads the whole game. Your heroes and progress are kept.</p>
       <div class="menu">
         <button id="btn-settings-close" class="btn">Done</button>
         <button id="btn-forfeit" class="btn ghost hidden">Quit Battle</button>

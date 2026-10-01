@@ -1,15 +1,19 @@
-// Network-first service worker: always fresh when online, still works offline.
-const CACHE = 'gambit-arena-v6';
+// Service worker: network-first, so the app is always fresh when online and
+// still works offline. Requests skip the browser's HTTP cache ('no-cache'
+// revalidates with the server) so a new deploy shows up on the next launch.
+const CACHE = 'gambit-arena';
 const SHELL = [
-  './', 'index.html', 'styles.css', 'manifest.webmanifest',
-  'src/main.js', 'src/audio.js',
+  './', 'index.html', 'styles.css', 'manifest.webmanifest', 'version.json',
+  'src/main.js', 'src/version.js', 'src/audio.js',
   'src/game/data.js', 'src/game/rules.js', 'src/game/ai.js', 'src/game/levels.js',
-  'src/render/board.js', 'src/render/sprites.js', 'src/ui/battle.js', 'src/ui/profile.js', 'src/game/characters.js', 'src/ui/campaign.js', 'src/game/progress.js',
+  'src/game/characters.js', 'src/game/progress.js',
+  'src/render/board.js', 'src/render/sprites.js',
+  'src/ui/battle.js', 'src/ui/profile.js', 'src/ui/campaign.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
@@ -20,9 +24,10 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
   e.respondWith(
-    fetch(req)
+    fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' })
       .then(res => {
         if (res.ok) {
           const copy = res.clone();

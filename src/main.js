@@ -7,6 +7,7 @@ import { showCampaign, hideCampaign, showSquad, hideSquad } from './ui/campaign.
 import { loadSave, resetSave, awardVictory, heroInfo } from './game/progress.js';
 import { UNITS, XP_PER_LEVEL } from './game/data.js';
 import { renderPortrait } from './render/sprites.js';
+import { VERSION, VERSION_NOTE, ASSETS } from './version.js';
 
 const $ = id => document.getElementById(id);
 
@@ -232,10 +233,64 @@ const BOSS = LEVELS[LEVELS.length - 1];
 const titleMap = () => ({ map: { rows: BOSS.tiles.length, cols: BOSS.tiles[0].length, tiles: BOSS.tiles }, units: [], phase: 'hero' });
 board.setState(titleMap());
 
-// ---------------------------------------------------------- offline (PWA)
+// ---------------------------------------------------------- offline (PWA) + updates
+$('app-version').textContent = `v${VERSION} · ${VERSION_NOTE}`;
+$('set-version').textContent = `v${VERSION}`;
+
+let swReg = null;
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then(r => { swReg = r; })
+    .catch(() => {});
 }
+
+function showBanner(text, { button = true } = {}) {
+  $('update-text').textContent = text;
+  $('btn-update-now').classList.toggle('hidden', !button);
+  $('btn-update-later').classList.toggle('hidden', !button);
+  $('update-banner').classList.remove('hidden');
+}
+
+// Compare our VERSION with version.json on the server (bypassing every cache).
+async function checkForUpdate({ manual = false } = {}) {
+  try {
+    const res = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+    const { version } = await res.json();
+    if (version !== VERSION) showBanner(`Version ${version} is ready (you have ${VERSION}).`);
+    else if (manual) showBanner(`You have the latest version (v${VERSION}).`, { button: false });
+  } catch {
+    if (manual) showBanner('Couldn’t check for updates — are you online?', { button: false });
+  }
+  if (manual) setTimeout(() => { if ($('btn-update-now').classList.contains('hidden')) $('update-banner').classList.add('hidden'); }, 2500);
+  swReg?.update().catch(() => {});
+}
+
+// Throw away every cached copy of the game, re-download it all, and reload.
+// Saved progress and settings live in localStorage and are not touched.
+async function forceUpdate() {
+  showBanner('Updating… downloading the newest version.', { button: false });
+  $('settings').classList.add('hidden');
+  try {
+    const regs = await navigator.serviceWorker?.getRegistrations?.() ?? [];
+    await Promise.all(regs.map(r => r.unregister()));
+  } catch { /* ignore */ }
+  try {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+  } catch { /* ignore */ }
+  await Promise.all(ASSETS.map(u => fetch(u, { cache: 'reload' }).catch(() => {})));
+  location.replace(`./?v=${Date.now()}`);
+}
+
+$('btn-update-now').addEventListener('click', forceUpdate);
+$('btn-update-later').addEventListener('click', () => $('update-banner').classList.add('hidden'));
+$('app-version').addEventListener('click', () => { audio.sfx('click'); checkForUpdate({ manual: true }); });
+$('btn-check-update').addEventListener('click', () => { audio.sfx('click'); checkForUpdate({ manual: true }); });
+$('btn-force-update').addEventListener('click', () => { audio.sfx('click'); forceUpdate(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
+setTimeout(() => checkForUpdate(), 1500);
+// Drop the ?v= cache-buster from the address once loaded.
+if (location.search.includes('v=')) history.replaceState(null, '', location.pathname);
 
 // Handy for debugging from the browser console.
 window.__gambit = { board, battle, settings, get save() { return save; }, startStage };
