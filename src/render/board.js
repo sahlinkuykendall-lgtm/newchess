@@ -1,0 +1,428 @@
+// Isometric board renderer, camera, hit testing and visual effects.
+import { drawCharacter, drawShadow } from './sprites.js';
+import { ASPECTS } from '../game/data.js';
+
+export const TW = 64, TH = 32, HS = 14;
+const BASE = -1; // ground thickness below height 0
+
+export function iso(r, c, h) {
+  return { x: (c - r) * TW / 2, y: (c + r) * TH / 2 - h * HS };
+}
+
+const PALETTE = {
+  grass: { top: '#5aa152', top2: '#529849', left: '#7a5638', right: '#634529', rim: '#3f7a35' },
+  stone: { top: '#9493a3', top2: '#8a899a', left: '#646374', right: '#525161', rim: '#6c6b7c' },
+  pillar: { top: '#a7a3b6', top2: '#a7a3b6', left: '#6e6a80', right: '#5a566b', rim: '#7f7a92' },
+  water: { top: '#2c7fd6', top2: '#2a78cc', left: '#1d5698', right: '#174a85', rim: '#2468b5' },
+  lava: { top: '#ff6a1f', top2: '#ff7d2a', left: '#7a2a10', right: '#62210c', rim: '#c2410c' },
+  shrine: { top: '#d9cf9c', top2: '#d9cf9c', left: '#7a5638', right: '#634529', rim: '#a99b5f' },
+};
+
+const OVERLAY = {
+  move: ['rgba(60,140,255,0.5)', 'rgba(170,215,255,0.95)'],
+  danger: ['rgba(190,90,255,0.28)', 'rgba(210,150,255,0.7)'],
+  range: ['rgba(255,80,80,0.22)', 'rgba(255,120,120,0.6)'],
+  target: ['rgba(255,70,70,0.5)', 'rgba(255,200,200,1)'],
+  heal: ['rgba(80,255,170,0.35)', 'rgba(150,255,210,0.9)'],
+  area: ['rgba(255,170,40,0.55)', 'rgba(255,230,160,1)'],
+  path: ['rgba(255,255,255,0.25)', 'rgba(255,255,255,0.6)'],
+};
+
+const easeOut = t => 1 - (1 - t) ** 3;
+
+export class Board {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.state = null;
+    this.cam = { x: 0, y: 0, zoom: 1 };
+    this.overlays = new Map(); // key -> overlay type
+    this.selectedId = null;
+    this.vis = new Map(); // unit id -> {r, c, h, dx, dy, alpha, flashUntil}
+    this.particles = [];
+    this.texts = [];
+    this.tweens = [];
+    this.shake = 0;
+    this.time = 0;
+    this.speed = 1;
+    this.insets = { top: 60, bottom: 20, left: 20, right: 20 };
+    this.resize();
+  }
+
+  setState(state) {
+    this.state = state;
+    this.vis.clear();
+    for (const u of state.units) this.vis.set(u.id, { r: u.r, c: u.c, h: this.heightAt(u.r, u.c), dx: 0, dy: 0, alpha: 1, flashUntil: 0 });
+    this.fit();
+  }
+
+  heightAt(r, c) {
+    const t = this.state.map.tiles[r]?.[c];
+    if (!t) return 0;
+    return t.type === 'water' ? t.h - 0.3 : t.h;
+  }
+
+  resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+    this.dpr = dpr;
+    this.w = w; this.h = h;
+    this.canvas.width = Math.round(w * dpr);
+    this.canvas.height = Math.round(h * dpr);
+    if (this.state) this.fit();
+  }
+
+  bounds() {
+    const { rows, cols } = this.state.map;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const t = this.state.map.tiles[r][c];
+      const top = iso(r, c, t.h);
+      const bot = iso(r, c, BASE);
+      minX = Math.min(minX, top.x - TW / 2); maxX = Math.max(maxX, top.x + TW / 2);
+      minY = Math.min(minY, top.y - TH / 2 - 40); maxY = Math.max(maxY, bot.y + TH / 2);
+    }
+    return { minX, maxX, minY, maxY };
+  }
+
+  fit() {
+    const b = this.bounds();
+    const { top, bottom, left, right } = this.insets;
+    const aw = Math.max(100, this.w - left - right), ah = Math.max(100, this.h - top - bottom);
+    const zoom = Math.min(aw / (b.maxX - b.minX), ah / (b.maxY - b.minY), 2.2);
+    this.cam.zoom = zoom;
+    this.cam.x = (b.minX + b.maxX) / 2 - (left - right) / 2 / zoom;
+    this.cam.y = (b.minY + b.maxY) / 2 - (top - bottom) / 2 / zoom;
+    this.fitZoom = zoom;
+  }
+
+  pan(dx, dy) {
+    this.cam.x -= dx / this.cam.zoom;
+    this.cam.y -= dy / this.cam.zoom;
+    const b = this.bounds();
+    this.cam.x = Math.max(b.minX, Math.min(b.maxX, this.cam.x));
+    this.cam.y = Math.max(b.minY, Math.min(b.maxY, this.cam.y));
+  }
+
+  zoomBy(f, sx, sy) {
+    const before = this.toWorld(sx, sy);
+    this.cam.zoom = Math.max(this.fitZoom * 0.7, Math.min(this.fitZoom * 3, this.cam.zoom * f));
+    const after = this.toWorld(sx, sy);
+    this.cam.x += before.x - after.x;
+    this.cam.y += before.y - after.y;
+  }
+
+  toWorld(sx, sy) {
+    return { x: (sx - this.w / 2) / this.cam.zoom + this.cam.x, y: (sy - this.h / 2) / this.cam.zoom + this.cam.y };
+  }
+
+  toScreen(wx, wy) {
+    return { x: (wx - this.cam.x) * this.cam.zoom + this.w / 2, y: (wy - this.cam.y) * this.cam.zoom + this.h / 2 };
+  }
+
+  unitScreenPos(unit) {
+    const v = this.vis.get(unit.id);
+    const p = iso(v.r, v.c, v.h);
+    return this.toScreen(p.x, p.y);
+  }
+
+  // What is under the screen point? Returns { units, tile }: every unit whose
+  // sprite was hit (front-most first) and the top tile under the point.
+  pick(sx, sy) {
+    const w = this.toWorld(sx, sy);
+    let tile = null;
+    const units = this.state.units.filter(u => u.alive)
+      .sort((a, b) => (b.r + b.c) - (a.r + a.c))
+      .filter(u => {
+        const v = this.vis.get(u.id);
+        const p = iso(v.r, v.c, v.h);
+        return Math.abs(w.x - p.x) < 14 && w.y < p.y + 5 && w.y > p.y - 48;
+      });
+    const { rows, cols } = this.state.map;
+    const order = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) order.push({ r, c });
+    order.sort((a, b) => (b.r + b.c) - (a.r + a.c));
+    const tiles = order.filter(({ r, c }) => {
+      const p = iso(r, c, this.heightAt(r, c));
+      return Math.abs(w.x - p.x) / (TW / 2) + Math.abs(w.y - p.y) / (TH / 2) <= 1;
+    });
+    tile = tiles[0] ?? null;
+    return { units, tile, tiles };
+  }
+
+  setOverlays(map) { this.overlays = map; }
+
+  // --- animation helpers -------------------------------------------------
+  tween(duration, fn) {
+    return new Promise(resolve => this.tweens.push({ start: this.time, duration: duration / this.speed, fn, resolve }));
+  }
+
+  async projectile(from, to, color) {
+    const a = iso(from.r, from.c, this.heightAt(from.r, from.c)), b = iso(to.r, to.c, this.heightAt(to.r, to.c));
+    const dist = Math.hypot(b.x - a.x, b.y - a.y);
+    await this.tween(120 + dist * 0.8, t => {
+      const x = a.x + (b.x - a.x) * t, y = a.y - 24 + (b.y - a.y) * t - Math.sin(t * Math.PI) * dist * 0.25;
+      this.particles.push({ x, y, vx: 0, vy: 0, born: this.time, life: 220, color, size: 4 });
+      this.particles.push({ x: x + (Math.random() - 0.5) * 4, y: y + (Math.random() - 0.5) * 4, vx: 0, vy: 0, born: this.time, life: 300, color: '#fff', size: 2 });
+    });
+  }
+
+  wait(ms) { return this.tween(ms, () => {}); }
+
+  syncUnit(unit) {
+    const v = this.vis.get(unit.id);
+    v.r = unit.r; v.c = unit.c; v.h = this.heightAt(unit.r, unit.c);
+  }
+
+  async walk(unit, path, onStep) {
+    const v = this.vis.get(unit.id);
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1], b = path[i];
+      const ha = this.heightAt(a.r, a.c), hb = this.heightAt(b.r, b.c);
+      const hop = Math.abs(hb - ha) > 0 ? 0.6 : 0.15;
+      onStep?.();
+      await this.tween(140, t => {
+        v.r = a.r + (b.r - a.r) * t;
+        v.c = a.c + (b.c - a.c) * t;
+        v.h = ha + (hb - ha) * t + Math.sin(t * Math.PI) * hop;
+      });
+    }
+    this.syncUnit(unit);
+  }
+
+  async lunge(unit, target) {
+    const v = this.vis.get(unit.id);
+    const a = iso(unit.r, unit.c, 0), b = iso(target.r, target.c, 0);
+    const dx = (b.x - a.x) * 0.35, dy = (b.y - a.y) * 0.35;
+    await this.tween(110, t => { v.dx = dx * easeOut(t); v.dy = dy * easeOut(t); });
+    this.tween(160, t => { v.dx = dx * (1 - t); v.dy = dy * (1 - t); });
+  }
+
+  hitFx(unit, { amount, color = '#fff', text = null, big = false, heal = false }) {
+    const v = this.vis.get(unit.id);
+    const p = iso(v.r, v.c, v.h);
+    if (!heal) {
+      v.flashUntil = this.time + 160;
+      this.shake = Math.max(this.shake, big ? 9 : 4);
+    }
+    this.burst(p.x, p.y - 22, heal ? '#7dffb2' : color, big ? 26 : 12);
+    this.texts.push({ x: p.x, y: p.y - 50, vy: -0.03, text: heal ? `+${amount}` : `${amount}`, color: heal ? '#7dffb2' : '#fff', stroke: heal ? '#0b4a2a' : '#5a0a14', size: big ? 22 : 17, born: this.time, life: 900 });
+    if (text) this.texts.push({ x: p.x, y: p.y - 68, vy: -0.02, text, color: '#ffe066', stroke: '#3a2400', size: 11, born: this.time, life: 1000 });
+  }
+
+  floatText(unit, text, color = '#ffe066') {
+    const v = this.vis.get(unit.id);
+    const p = iso(v.r, v.c, v.h);
+    this.texts.push({ x: p.x, y: p.y - 62, vy: -0.025, text, color, stroke: '#1a1426', size: 12, born: this.time, life: 1000 });
+  }
+
+  burst(x, y, color, n = 12) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, s = 0.05 + Math.random() * 0.15;
+      this.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.06, born: this.time, life: 400 + Math.random() * 400, color, size: 1.5 + Math.random() * 2.5 });
+    }
+  }
+
+  areaFx(tiles, color) {
+    for (const t of tiles) {
+      const p = iso(t.r, t.c, this.heightAt(t.r, t.c));
+      this.burst(p.x, p.y, color, 8);
+    }
+  }
+
+  async koFx(unit) {
+    const v = this.vis.get(unit.id);
+    const p = iso(v.r, v.c, v.h);
+    this.burst(p.x, p.y - 20, '#ffffff', 20);
+    await this.tween(500, t => { v.alpha = 1 - t; v.dy = -t * 12; });
+  }
+
+  // --- rendering ---------------------------------------------------------
+  frame(now) {
+    const dt = this.time ? Math.min(50, now - this.time) : 16;
+    this.time = now;
+    for (const tw of [...this.tweens]) {
+      const t = Math.min(1, (now - tw.start) / tw.duration);
+      tw.fn(t);
+      if (t >= 1) { this.tweens.splice(this.tweens.indexOf(tw), 1); tw.resolve(); }
+    }
+    this.draw(dt);
+  }
+
+  draw(dt) {
+    const { ctx, dpr } = this;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    if (!this.state) return;
+
+    this.shake *= 0.85;
+    const sx = (Math.random() - 0.5) * this.shake, sy = (Math.random() - 0.5) * this.shake;
+    const z = this.cam.zoom * dpr;
+    ctx.setTransform(z, 0, 0, z, (this.w / 2 + sx) * dpr - this.cam.x * z, (this.h / 2 + sy) * dpr - this.cam.y * z);
+    ctx.lineJoin = 'round';
+
+    const { rows, cols, tiles } = this.state.map;
+    const items = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) items.push({ d: (r + c) * 2, r, c, tile: tiles[r][c] });
+    for (const u of this.state.units) {
+      const v = this.vis.get(u.id);
+      if (!u.alive && v.alpha <= 0) continue;
+      items.push({ d: (Math.ceil(v.r) + Math.ceil(v.c)) * 2 + 1, unit: u, v });
+    }
+    items.sort((a, b) => a.d - b.d);
+    for (const it of items) {
+      if (it.unit) this.drawUnit(it.unit, it.v);
+      else this.drawTile(it.r, it.c, it.tile);
+    }
+
+    // particles + text on top
+    this.particles = this.particles.filter(p => this.time - p.born < p.life);
+    for (const p of this.particles) {
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 0.0004 * dt;
+      ctx.globalAlpha = 1 - (this.time - p.born) / p.life;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+    this.texts = this.texts.filter(t => this.time - t.born < t.life);
+    for (const t of this.texts) {
+      const age = this.time - t.born;
+      const pop = age < 120 ? 0.6 + 0.4 * (age / 120) * 1.3 : 1;
+      ctx.globalAlpha = Math.min(1, 2 - (age / t.life) * 2);
+      ctx.font = `900 ${t.size * pop}px "Avenir Next", system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = t.stroke;
+      const y = t.y + t.vy * age;
+      ctx.strokeText(t.text, t.x, y);
+      ctx.fillStyle = t.color;
+      ctx.fillText(t.text, t.x, y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Tall blocks fade out when a unit stands right behind them.
+  hidesUnit(r, c, tile) {
+    if (tile.type !== 'pillar') return false;
+    const behind = (pr, pc) => pr + pc < r + c && Math.abs(pr - r) <= 1 && Math.abs(pc - c) <= 1;
+    if (this.state.units.some(u => u.alive && behind(u.r, u.c))) return true;
+    return [[r - 1, c], [r, c - 1], [r - 1, c - 1]].some(([pr, pc]) => this.overlays.has(`${pr},${pc}`));
+  }
+
+  drawTile(r, c, tile) {
+    const { ctx } = this;
+    ctx.globalAlpha = this.hidesUnit(r, c, tile) ? 0.45 : 1;
+    const pal = PALETTE[tile.type];
+    const h = this.heightAt(r, c);
+    const p = iso(r, c, h);
+    const depth = (h - BASE) * HS;
+    const L = { x: p.x - TW / 2, y: p.y }, R = { x: p.x + TW / 2, y: p.y };
+    const T = { x: p.x, y: p.y - TH / 2 }, B = { x: p.x, y: p.y + TH / 2 };
+
+    // side faces
+    ctx.beginPath();
+    ctx.moveTo(L.x, L.y); ctx.lineTo(B.x, B.y); ctx.lineTo(B.x, B.y + depth); ctx.lineTo(L.x, L.y + depth); ctx.closePath();
+    ctx.fillStyle = pal.left; ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(B.x, B.y); ctx.lineTo(R.x, R.y); ctx.lineTo(R.x, R.y + depth); ctx.lineTo(B.x, B.y + depth); ctx.closePath();
+    ctx.fillStyle = pal.right; ctx.fill();
+    // grass lip
+    if (tile.type === 'grass' || tile.type === 'shrine') {
+      ctx.beginPath();
+      ctx.moveTo(L.x, L.y); ctx.lineTo(B.x, B.y); ctx.lineTo(R.x, R.y); ctx.lineTo(R.x, R.y + 4); ctx.lineTo(B.x, B.y + 4); ctx.lineTo(L.x, L.y + 4); ctx.closePath();
+      ctx.fillStyle = pal.rim; ctx.fill();
+    }
+
+    // top face
+    let top = (r + c) % 2 ? pal.top : pal.top2;
+    if (tile.type === 'lava') {
+      const k = 0.5 + 0.5 * Math.sin(this.time / 400 + r + c);
+      top = `rgb(255,${90 + 50 * k},${20 + 20 * k})`;
+    }
+    ctx.beginPath();
+    ctx.moveTo(T.x, T.y); ctx.lineTo(R.x, R.y); ctx.lineTo(B.x, B.y); ctx.lineTo(L.x, L.y); ctx.closePath();
+    ctx.fillStyle = top; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1; ctx.stroke();
+
+    if (tile.type === 'water') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 1.2;
+      const o = ((this.time / 60) + (r * 7 + c * 13)) % 24 - 12;
+      ctx.beginPath(); ctx.moveTo(p.x - 10 + o * 0.5, p.y - 2); ctx.lineTo(p.x + 2 + o * 0.5, p.y - 2); ctx.stroke();
+    } else if (tile.type === 'shrine') {
+      const k = 0.5 + 0.5 * Math.sin(this.time / 500);
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, 16, 8, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(90,255,200,${0.5 + 0.4 * k})`; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, 8, 4, 0, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(90,255,200,${0.25 + 0.25 * k})`; ctx.fill();
+    } else if (tile.type === 'pillar') {
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.moveTo(B.x - 6, B.y + 8); ctx.lineTo(B.x - 2, B.y + 20); ctx.lineTo(B.x - 7, B.y + 30); ctx.stroke();
+    } else if (tile.type === 'grass' && (r * 31 + c * 17) % 5 === 0) {
+      ctx.strokeStyle = '#3f7a35'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(p.x - 6, p.y + 2); ctx.lineTo(p.x - 7, p.y - 3); ctx.moveTo(p.x - 4, p.y + 2); ctx.lineTo(p.x - 3, p.y - 4); ctx.moveTo(p.x + 8, p.y - 3); ctx.lineTo(p.x + 9, p.y - 7); ctx.stroke();
+    }
+
+    const ov = this.overlays.get(`${r},${c}`);
+    if (ov) {
+      const [fill, stroke] = OVERLAY[ov];
+      const inset = 3;
+      ctx.beginPath();
+      ctx.moveTo(T.x, T.y + inset / 2); ctx.lineTo(R.x - inset, R.y); ctx.lineTo(B.x, B.y - inset / 2); ctx.lineTo(L.x + inset, L.y); ctx.closePath();
+      const pulse = ov === 'target' || ov === 'area' ? 0.75 + 0.25 * Math.sin(this.time / 150) : 1;
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = fill; ctx.fill();
+      ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  drawUnit(u, v) {
+    const { ctx } = this;
+    const p = iso(v.r, v.c, v.h);
+    const bob = u.alive && !u.acted ? Math.sin(this.time / 300 + u.id.length) * 0.8 : 0;
+    ctx.save();
+    ctx.translate(p.x + v.dx, p.y + v.dy);
+    ctx.globalAlpha = v.alpha;
+
+    // selection ring / team ring
+    const ring = u.team === 'hero' ? '#4cc3ff' : '#ff4d6d';
+    ctx.beginPath(); ctx.ellipse(0, 0, 15, 6, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = this.selectedId === u.id ? '#ffe066' : ring;
+    ctx.lineWidth = this.selectedId === u.id ? 2.5 : 1.5;
+    ctx.stroke();
+    drawShadow(ctx, 12);
+
+    ctx.translate(0, bob);
+    if (u.sp >= 100 && u.alive) {
+      const k = 0.5 + 0.5 * Math.sin(this.time / 160);
+      ctx.shadowColor = ASPECTS[u.aspect].color;
+      ctx.shadowBlur = 8 + 8 * k;
+    }
+    if (u.acted && u.team === 'hero' && this.state.phase === 'hero') ctx.globalAlpha = v.alpha * 0.55;
+    drawCharacter(ctx, u.look, u.facing);
+    ctx.restore();
+
+    if (this.time < v.flashUntil) {
+      // quick white flash overlay
+      ctx.save();
+      ctx.translate(p.x + v.dx, p.y + v.dy + bob);
+      ctx.globalAlpha = 0.7;
+      ctx.globalCompositeOperation = 'lighter';
+      drawCharacter(ctx, u.look, u.facing);
+      ctx.restore();
+    }
+
+    // HP bar
+    if (u.alive) {
+      const x = p.x - 14, y = p.y - 58 + v.dy;
+      ctx.fillStyle = 'rgba(10,8,20,0.8)';
+      ctx.fillRect(x - 1, y - 1, 30, 6);
+      const f = u.hp / u.maxHp;
+      ctx.fillStyle = u.team === 'hero' ? (f > 0.35 ? '#4ade80' : '#facc15') : (f > 0.35 ? '#ff5d73' : '#ff9f43');
+      ctx.fillRect(x, y, 28 * f, 2.6);
+      ctx.fillStyle = ASPECTS[u.aspect].color;
+      ctx.fillRect(x, y + 2.8, 28 * (u.sp / 100), 1.4);
+    }
+  }
+}

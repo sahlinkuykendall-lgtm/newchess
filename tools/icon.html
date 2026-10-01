@@ -1,0 +1,24 @@
+<!doctype html>
+<html><body style="margin:0;background:transparent">
+<canvas id="c" width="512" height="512" style="width:512px;height:512px"></canvas>
+<script type="module">
+import { drawCharacter } from '../src/render/sprites.js';
+const c = document.getElementById('c'), ctx = c.getContext('2d');
+const g = ctx.createRadialGradient(256, 200, 40, 256, 256, 380);
+g.addColorStop(0, '#4a2f9a'); g.addColorStop(1, '#120f1f');
+ctx.fillStyle = g; ctx.fillRect(0, 0, 512, 512);
+// isometric tile
+ctx.save(); ctx.translate(256, 380);
+ctx.beginPath(); ctx.moveTo(0, -70); ctx.lineTo(170, 0); ctx.lineTo(0, 70); ctx.lineTo(-170, 0); ctx.closePath();
+ctx.fillStyle = '#5aa152'; ctx.fill();
+ctx.beginPath(); ctx.moveTo(-170, 0); ctx.lineTo(0, 70); ctx.lineTo(0, 120); ctx.lineTo(-170, 50); ctx.closePath(); ctx.fillStyle = '#7a5638'; ctx.fill();
+ctx.beginPath(); ctx.moveTo(170, 0); ctx.lineTo(0, 70); ctx.lineTo(0, 120); ctx.lineTo(170, 50); ctx.closePath(); ctx.fillStyle = '#634529'; ctx.fill();
+ctx.restore();
+// hero
+ctx.save(); ctx.translate(256, 395); ctx.scale(6.4, 6.4); ctx.lineJoin = 'round';
+drawCharacter(ctx, { body: 'human', skin: '#f2c6a0', hair: '#ff5a2a', hairStyle: 'spiky', outfit: '#2b2f45', accent: '#ff8a3d' }, { dr: 0, dc: 1 });
+ctx.restore();
+ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 14; ctx.strokeRect(7, 7, 498, 498);
+window.done = true;
+</script>
+</body></html>

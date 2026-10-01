@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Gambit Arena</title>
+  <meta name="description" content="A chess-like isometric tactics RPG.">
+  <meta name="theme-color" content="#120f1f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gambit">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="want-landscape">
+  <canvas id="board"></canvas>
+
+  <!-- Title screen -->
+  <section id="title" class="screen">
+    <div class="logo">
+      <div class="logo-kicker">THE GRAND GAMBIT</div>
+      <h1>GAMBIT<span>ARENA</span></h1>
+    </div>
+    <div class="menu">
+      <button id="btn-start" class="btn big">Start Battle</button>
+      <button id="btn-title-settings" class="btn ghost">Settings</button>
+    </div>
+    <p class="hint">Tip: on iPhone, tap Share → <b>Add to Home Screen</b> for full-screen play.</p>
+  </section>
+
+  <!-- Battle HUD -->
+  <section id="hud" class="hidden">
+    <div id="topbar">
+      <div id="turn-pill" class="pill">Turn 1 · Your move</div>
+      <div class="top-actions">
+        <button id="btn-help" class="icon-btn" aria-label="Aspect chart">?</button>
+        <button id="btn-settings" class="icon-btn" aria-label="Settings">⚙</button>
+        <button id="btn-end" class="btn small">End Turn</button>
+      </div>
+    </div>
+    <div id="forecast" class="panel hidden"></div>
+    <div id="unit-card" class="panel hidden"></div>
+    <div id="actions" class="hidden"></div>
+    <div id="banner" class="hidden"></div>
+  </section>
+
+  <!-- Ultimate cut-in -->
+  <div id="cutin" class="hidden">
+    <div class="cutin-band">
+      <canvas id="cutin-portrait"></canvas>
+      <div class="cutin-text">
+        <div id="cutin-who"></div>
+        <div id="cutin-move"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Story dialog -->
+  <div id="dialog" class="hidden">
+    <div class="dialog-box">
+      <canvas id="dialog-portrait"></canvas>
+      <div>
+        <div id="dialog-who"></div>
+        <div id="dialog-text"></div>
+      </div>
+      <div class="dialog-next">▼</div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="result" class="modal hidden">
+    <div class="modal-card">
+      <h2 id="result-title"></h2>
+      <p id="result-text"></p>
+      <div class="menu">
+        <button id="btn-retry" class="btn">Play Again</button>
+        <button id="btn-to-title" class="btn ghost">Title</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div id="settings" class="modal hidden">
+    <div class="modal-card">
+      <h2>Settings</h2>
+      <label class="row">Music <input type="checkbox" id="set-music"></label>
+      <label class="row">Sound FX <input type="checkbox" id="set-sfx"></label>
+      <label class="row">Orientation
+        <select id="set-orient">
+          <option value="landscape">Landscape</option>
+          <option value="portrait">Portrait</option>
+          <option value="auto">Auto</option>
+        </select>
+      </label>
+      <label class="row">Battle speed
+        <select id="set-speed">
+          <option value="1">Normal</option>
+          <option value="1.6">Fast</option>
+        </select>
+      </label>
+      <div class="menu">
+        <button id="btn-settings-close" class="btn">Done</button>
+        <button id="btn-forfeit" class="btn ghost hidden">Quit Battle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aspect chart -->
+  <div id="help" class="modal hidden">
+    <div class="modal-card">
+      <h2>Aspects</h2>
+      <p class="aspect-wheel">
+        <span class="a-blaze">🔥 Blaze</span> ➜ <span class="a-gale">🌪 Gale</span> ➜
+        <span class="a-stone">⛰ Stone</span> ➜ <span class="a-tide">🌊 Tide</span> ➜ <span class="a-blaze">🔥 Blaze</span>
+      </p>
+      <p class="aspect-wheel"><span class="a-lumen">✦ Lumen</span> ⇄ <span class="a-umbra">☾ Umbra</span></p>
+      <ul class="rules">
+        <li>Strong aspect: <b>×1.5</b> damage. Weak: <b>×0.75</b>.</li>
+        <li><b>Backstab</b> (hit from behind): ×1.5 (Nyx ×2).</li>
+        <li><b>Combo</b>: allies next to your target join the attack.</li>
+        <li><b>SP</b> fills from fighting. At 100 → <b>Ultimate</b>.</li>
+        <li>No dice: damage is always exactly what the forecast says.</li>
+        <li>🟢 Shrines heal · 🟠 Lava burns · 🔵 Water blocks.</li>
+        <li>Drag to pan the board, pinch to zoom.</li>
+      </ul>
+      <div class="menu"><button id="btn-help-close" class="btn">Got it</button></div>
+    </div>
+  </div>
+
+  <div id="rotate">
+    <div class="rotate-icon">📱↻</div>
+    <p id="rotate-text">Rotate your phone</p>
+    <button id="btn-rotate-switch" class="btn ghost small"></button>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
