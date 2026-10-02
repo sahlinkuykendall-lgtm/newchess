@@ -286,3 +286,30 @@ test('version and offline file lists stay in sync', async () => {
   const srcFiles = fs.readdirSync('src', { recursive: true }).filter(f => f.endsWith('.js')).map(f => `src/${f}`);
   for (const f of srcFiles) assert.ok(ASSETS.includes(f), `${f} is listed for offline use`);
 });
+
+test('gear: gold, buying, equipping and stat bonuses', async () => {
+  const P = await import('../src/game/progress.js');
+  const save = newSave();
+  assert.equal(save.gold, 100);
+  assert.equal(P.buyItem(save, 'ironEdge'), false, 'tier 1 item locked at start');
+  assert.equal(P.buyItem(save, 'trainingWraps'), true);
+  assert.equal(save.gold, 40);
+  assert.equal(P.buyItem(save, 'paddedVest'), false, 'not enough gold');
+  assert.equal(P.equipItem(save, 'kai', 'weapon', 'trainingWraps'), true);
+  assert.equal(P.equipItem(save, 'goro', 'weapon', 'trainingWraps'), false, 'one copy, one hero');
+  assert.equal(P.equipItem(save, 'kai', 'armor', 'trainingWraps'), false, 'wrong slot');
+  const r = awardVictory(save, LEVELS[0], ['kai']);
+  assert.equal(r.gold, LEVELS[0].gold);
+  assert.equal(P.shopTier(save), 1);
+  const plain = createUnit('kai', 'hero', 0, 0, null, { lv: 2 });
+  const geared = createUnit('kai', 'hero', 0, 0, null, P.squadEntry(save, 'kai'));
+  assert.equal(geared.atk, plain.atk + 2);
+
+  const leaf = createUnit('sora', 'hero', 1, 1, null, { gear: { charm: 'healingLeaf', armor: 'chainMail' } });
+  assert.equal(leaf.maxHp, createUnit('sora', 'hero', 0, 0).maxHp + 8);
+  leaf.hp = 20;
+  const s = battle([leaf]);
+  s.phase = 'enemy';
+  startPhase(s, 'hero');
+  assert.equal(leaf.hp, 26, 'Healing Leaf heals 6 per turn');
+});

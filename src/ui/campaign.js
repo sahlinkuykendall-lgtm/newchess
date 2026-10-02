@@ -1,7 +1,8 @@
 // Campaign map (stage select) and squad select screens.
 import { LEVELS } from '../game/levels.js';
 import { UNITS, ASPECTS, XP_PER_LEVEL } from '../game/data.js';
-import { heroInfo, isStageUnlocked } from '../game/progress.js';
+import { heroInfo, isStageUnlocked, squadEntry, heroGear } from '../game/progress.js';
+import { ITEMS, SLOTS, SLOT_ICONS } from '../game/items.js';
 import { renderPortrait } from '../render/sprites.js';
 import { HERO_IDS } from './profile.js';
 
@@ -30,6 +31,7 @@ export function showCampaign(save, onPick) {
     if (b && !b.disabled) onPick(Number(b.dataset.i));
   };
   $('camp-board').textContent = `Board 1 · ${LEVELS[0].board}`;
+  $('camp-gold').textContent = `🪙 ${save.gold ?? 0}`;
   $('campaign').classList.remove('hidden');
   // scroll to the first uncleared stage
   const next = LEVELS.findIndex(l => !save.cleared[l.id]);
@@ -60,6 +62,7 @@ export function showSquad(save, level, onFight) {
         <b>${esc(t.name)} <span class="sq-lv">Lv ${h.lv}</span></b>
         <small>${esc(t.title)} · ${ASPECTS[t.aspect].glyph}</small>
         <div class="sq-xp"><i style="width:${(h.xp / XP_PER_LEVEL) * 100}%"></i></div>
+        <div class="sq-gear">${SLOTS.map(s => { const g = heroGear(save, id)[s]; return `<span class="${g ? 'on' : ''}" title="${g ? ITEMS[g].name : 'empty'}">${SLOT_ICONS[s]}</span>`; }).join('')}</div>
       </button>`;
     }).join('');
     for (const c of $('squad-grid').querySelectorAll('button.sq-card')) {
@@ -79,7 +82,7 @@ export function showSquad(save, level, onFight) {
   };
   $('btn-squad-go').onclick = () => {
     if (!picked.length) return;
-    onFight(picked.map(id => ({ id, lv: heroInfo(save, id).lv })));
+    onFight(picked.map(id => squadEntry(save, id)));
   };
   $('squad').classList.remove('hidden');
   render();

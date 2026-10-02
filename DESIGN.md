@@ -151,6 +151,20 @@ needs grinding a level or two — or sharp tactics. A thoughtful human beats the
 - **Difficulty:** Easy ×0.85 / Normal ×1 / Hard ×1.15 enemy HP & ATK.
 - Progress saves on the device (Settings → Reset Progress to start over).
 
+## Gold & gear (v0.6)
+- Every win pays **gold** (1-1: 120 → 1-5: 300; replays 60%). You start with 100.
+- The **Armory** (campaign screen or squad select) sells gear; each hero has **Weapon / Armor / Charm** slots.
+  A bought copy can be worn by one hero at a time; buy more copies for more heroes.
+- Better items unlock as the campaign goes on: tier 0 at start, tier 1 after 1-1, tier 2 after 1-3, tier 3 after 1-5.
+
+| Slot | Tier 0 | Tier 1 | Tier 2 | Tier 3 |
+|------|--------|--------|--------|--------|
+| Weapon | Training Wraps +2 ATK (60) | Iron Edge +4 ATK (160) | Ember Fang +6 ATK (340) | Starsteel +9 ATK (650) |
+| Armor | Padded Vest +2 DEF (60) | Chain Mail +3 DEF +8 HP (170) | Stoneplate +5 DEF +12 HP (360) | Dragonscale +7 DEF +20 HP (680) |
+| Charm | Feather Charm +2 Jump (90) · Spirit Bead +25 start SP (120) | Swift Boots +1 MOV (220) | Healing Leaf +6 HP/turn (280) | Focus Band +6 SP/turn (420) |
+
+Gear is the reward for grinding: the difficulty numbers below are measured *without* gear.
+
 ## Characters
 Every fighter has hand-drawn (procedural) anime art with idle animations, a chess-piece
 sigil, a passive ability and a full story profile — see **Characters** on the title screen,
@@ -179,7 +193,7 @@ or tap any unit's info card in battle. Full text lives in `src/game/characters.j
 
 ## Roadmap
 - **v0 (now):** one 5v5 battle, isometric board, moves/attacks/skills/ultimates, AI, cut-ins, chiptune, PWA install.
-- **v1:** ✅ campaign map, XP/levels, saving, squad select, 5 stages · next: gold, gear shop, more mission types.
+- **v1:** ✅ campaign map, XP/levels, saving, squad select, 5 stages, gold & gear shop · next: Board 2, more mission types.
 - **v2:** recruitable roster to 20+, transformations, Extra Battles, Endless mode.
 - **v3:** Tournament mode, daily/puzzle challenges, pass-and-play.
 - **v4:** online multiplayer (needs a server), real art pass, public release.

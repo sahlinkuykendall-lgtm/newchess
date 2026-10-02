@@ -2,13 +2,15 @@
 // Saved in localStorage on this device.
 import { LEVELS } from './levels.js';
 import { XP_PER_LEVEL, MAX_LEVEL } from './data.js';
+import { ITEMS, SLOTS } from './items.js';
 
 const KEY = 'gambit-arena:save';
 export const STARTING_HEROES = ['kai', 'goro', 'rin', 'sora'];
-export const REPLAY_XP = 0.6; // replaying a cleared stage gives 60% XP
+export const REPLAY_XP = 0.6; // replaying a cleared stage gives 60% XP (and gold)
+export const STARTING_GOLD = 100;
 
 export function newSave() {
-  return { unlocked: [...STARTING_HEROES], heroes: {}, cleared: {}, lastSquad: [...STARTING_HEROES] };
+  return { unlocked: [...STARTING_HEROES], heroes: {}, cleared: {}, lastSquad: [...STARTING_HEROES], gold: STARTING_GOLD, items: {}, gear: {} };
 }
 
 export function loadSave() {
@@ -39,6 +41,8 @@ export function isStageUnlocked(save, index) {
 export function awardVictory(save, level, squadIds) {
   const firstClear = !save.cleared[level.id];
   const xp = Math.round((level.xp ?? 100) * (firstClear ? 1 : REPLAY_XP));
+  const gold = Math.round((level.gold ?? 100) * (firstClear ? 1 : REPLAY_XP));
+  save.gold = (save.gold ?? 0) + gold;
   const levelUps = [];
   for (const id of squadIds) {
     const h = { ...heroInfo(save, id) };
@@ -58,5 +62,47 @@ export function awardVictory(save, level, squadIds) {
   save.cleared[level.id] = true;
   save.lastSquad = squadIds;
   writeSave(save);
-  return { xp, firstClear, levelUps, joined };
+  return { xp, gold, firstClear, levelUps, joined };
 }
+
+// ------------------------------------------------------------------ gear
+// Shop tier: 0 at start, then unlocks with progress (1 after 1-1, 2 after 1-3, 3 after 1-5).
+export function shopTier(save) {
+  const n = LEVELS.filter(l => save.cleared[l.id]).length;
+  return n >= 5 ? 3 : n >= 3 ? 2 : n >= 1 ? 1 : 0;
+}
+
+export const heroGear = (save, id) => save.gear?.[id] ?? {};
+export const owned = (save, itemId) => save.items?.[itemId] ?? 0;
+
+// How many copies of an item are equipped across all heroes.
+export function equippedCount(save, itemId) {
+  return Object.values(save.gear ?? {}).filter(g => SLOTS.some(s => g[s] === itemId)).length;
+}
+
+export function buyItem(save, itemId) {
+  const it = ITEMS[itemId];
+  if (!it || it.tier > shopTier(save) || (save.gold ?? 0) < it.price) return false;
+  save.gold -= it.price;
+  save.items = { ...save.items, [itemId]: owned(save, itemId) + 1 };
+  writeSave(save);
+  return true;
+}
+
+// Equip an owned item (null unequips). A copy can only be worn by one hero.
+export function equipItem(save, heroId, slot, itemId) {
+  const gear = { ...heroGear(save, heroId) };
+  if (itemId) {
+    const it = ITEMS[itemId];
+    if (!it || it.slot !== slot) return false;
+    const free = owned(save, itemId) - equippedCount(save, itemId) + (gear[slot] === itemId ? 1 : 0);
+    if (free <= 0) return false;
+    gear[slot] = itemId;
+  } else delete gear[slot];
+  save.gear = { ...save.gear, [heroId]: gear };
+  writeSave(save);
+  return true;
+}
+
+// Squad entries for a battle: level + equipped gear.
+export const squadEntry = (save, id) => ({ id, lv: heroInfo(save, id).lv, gear: heroGear(save, id) });

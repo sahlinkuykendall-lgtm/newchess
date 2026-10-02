@@ -45,7 +45,11 @@
     <div class="camp-head">
       <button id="btn-camp-back" class="icon-btn" aria-label="Back">‹</button>
       <div><div class="camp-kicker">THE GRAND GAMBIT</div><h2 id="camp-board">Board 1</h2></div>
-      <button id="btn-camp-roster" class="btn small ghost">Characters</button>
+      <div class="camp-actions">
+        <span id="camp-gold" class="gold-pill"></span>
+        <button id="btn-camp-armory" class="btn small">⚔ Armory</button>
+        <button id="btn-camp-roster" class="btn small ghost">Characters</button>
+      </div>
     </div>
     <div id="camp-stages" class="camp-stages"></div>
     <p class="hint">Stuck? Replay cleared stages to level up, or try Easy in Settings.</p>
@@ -56,9 +60,24 @@
     <div class="camp-head">
       <button id="btn-squad-back" class="icon-btn" aria-label="Back">‹</button>
       <div class="squad-head"><h2 id="squad-title"></h2><div id="squad-sub" class="squad-sub"></div></div>
+      <button id="btn-squad-armory" class="btn small ghost">⚔ Armory</button>
       <button id="btn-squad-go" class="btn">Fight!</button>
     </div>
     <div id="squad-grid" class="squad-grid"></div>
+  </section>
+
+  <!-- Armory: shop + equipment -->
+  <section id="armory" class="screen panel-screen hidden">
+    <div class="camp-head">
+      <button id="btn-armory-back" class="icon-btn" aria-label="Back">‹</button>
+      <div><div class="camp-kicker">BUY · EQUIP</div><h2>Armory</h2></div>
+      <span id="armory-gold" class="gold-pill"></span>
+    </div>
+    <div id="armory-heroes" class="arm-heroes"></div>
+    <div class="arm-body">
+      <div id="armory-hero" class="arm-hero"></div>
+      <div id="armory-items" class="arm-items"></div>
+    </div>
   </section>
 
   <!-- Battle HUD -->

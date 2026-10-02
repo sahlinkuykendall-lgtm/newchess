@@ -4,7 +4,8 @@ import { LEVELS } from './game/levels.js';
 import { audio } from './audio.js';
 import { bindProfileUi, openRoster } from './ui/profile.js';
 import { showCampaign, hideCampaign, showSquad, hideSquad } from './ui/campaign.js';
-import { loadSave, resetSave, awardVictory, heroInfo } from './game/progress.js';
+import { showArmory, hideArmory, bindArmory } from './ui/armory.js';
+import { loadSave, resetSave, awardVictory, squadEntry } from './game/progress.js';
 import { UNITS, XP_PER_LEVEL } from './game/data.js';
 import { renderPortrait } from './render/sprites.js';
 import { VERSION, VERSION_NOTE, ASSETS } from './version.js';
@@ -100,13 +101,14 @@ document.addEventListener('gesturestart', e => e.preventDefault()); // iOS page 
 
 // ------------------------------------------------------------------ screens
 const esc = x => String(x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-const hideAll = () => ['title', 'campaign', 'squad', 'result'].forEach(id => $(id).classList.add('hidden'));
+const hideAll = () => ['title', 'campaign', 'squad', 'result', 'armory'].forEach(id => $(id).classList.add('hidden'));
 
 function openCampaign() {
   audio.unlock();
   battle.stop();
   hideAll();
   hideSquad();
+  hideArmory();
   board.setState(titleMap());
   board.setOverlays(new Map());
   $('btn-forfeit').classList.add('hidden');
@@ -115,6 +117,7 @@ function openCampaign() {
 }
 
 function openSquad(index) {
+  current = { ...(current ?? {}), pendingIndex: index };
   hideAll();
   hideCampaign();
   showSquad(save, LEVELS[index], squad => { audio.sfx('select'); startStage(index, squad); });
@@ -137,7 +140,7 @@ async function handleEnd(result, { level, squadIds }) {
     if (!save.cleared[level.id] && level.outro) await battle.runDialog(level.outro);
     const r = awardVictory(save, level, squadIds);
     title.textContent = 'VICTORY!';
-    html += `<p class="res-sub">${esc(level.stage)} ${esc(level.name)} cleared! <b>+${r.xp} XP</b> each${r.firstClear ? '' : ' (replay)'}</p>`;
+    html += `<p class="res-sub">${esc(level.stage)} ${esc(level.name)} cleared! <b>+${r.xp} XP</b> each · <b>+${r.gold} 🪙</b>${r.firstClear ? '' : ' (replay)'} · Gold: ${save.gold}</p>`;
     html += '<div class="res-list">' + r.levelUps.map(u => `
       <div class="res-row">
         <canvas data-id="${u.id}"></canvas>
@@ -169,11 +172,23 @@ async function handleEnd(result, { level, squadIds }) {
 $('btn-start').addEventListener('click', () => { audio.sfx('click'); openCampaign(); });
 $('btn-camp-back').addEventListener('click', () => { audio.sfx('click'); toTitle(); });
 $('btn-squad-back').addEventListener('click', () => { audio.sfx('click'); openCampaign(); });
+bindArmory();
+const armorySound = n => audio.sfx(n);
+$('btn-camp-armory').addEventListener('click', () => {
+  audio.sfx('click'); hideCampaign();
+  showArmory(save, { onSound: armorySound, onBack: () => openCampaign() });
+});
+$('btn-squad-armory').addEventListener('click', () => {
+  audio.sfx('click');
+  const idx = current?.pendingIndex ?? 0;
+  hideSquad();
+  showArmory(save, { onSound: armorySound, onBack: () => openSquad(idx) });
+});
 $('btn-camp-roster').addEventListener('click', () => { audio.sfx('click'); openRoster(save.unlocked); });
 $('btn-next').addEventListener('click', () => { audio.sfx('click'); battle.stop(); openSquad(current.index + 1); });
 $('btn-retry').addEventListener('click', () => {
   audio.sfx('click');
-  startStage(current.index, current.squad.map(h => ({ id: h.id, lv: heroInfo(save, h.id).lv })));
+  startStage(current.index, current.squad.map(h => squadEntry(save, h.id)));
 });
 $('btn-to-camp').addEventListener('click', () => { audio.sfx('click'); openCampaign(); });
 

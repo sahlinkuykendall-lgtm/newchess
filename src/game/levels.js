@@ -54,6 +54,7 @@ export const LEVELS = [
     party: ['kai', 'goro', 'rin', 'sora'],
     heroLevel: 1,
     xp: 100,
+    gold: 120,
     joins: ['nyx'],
     outro: [
       { who: 'Nyx', text: 'Not bad. I’m on your team now.' },
@@ -99,6 +100,7 @@ export const LEVELS = [
     party: ['kai', 'goro', 'rin', 'sora', 'nyx'],
     heroLevel: 2,
     xp: 110,
+    gold: 150,
     joins: ['aiko', 'pip'],
     outro: [
       { who: 'Aiko', text: 'I’m Aiko — captain of the human team. My shoulder’s healed. Mind if I take my spot back?' },
@@ -147,6 +149,7 @@ export const LEVELS = [
     party: ['kai', 'goro', 'rin', 'sora', 'aiko'],
     heroLevel: 3,
     xp: 120,
+    gold: 180,
     joins: ['hana'],
     outro: [
       { who: 'Hana', text: 'Big brother!! I snuck in! Don’t be mad, I brought my fan!' },
@@ -195,6 +198,7 @@ export const LEVELS = [
     party: ['kai', 'goro', 'rin', 'sora', 'hana'],
     heroLevel: 4,
     xp: 130,
+    gold: 210,
     joins: ['mako'],
     outro: [
       { who: 'Mako', text: 'Ha! You lot fight like a storm. Name’s Mako. I’ll lend you my blade for the final.' },
@@ -246,6 +250,7 @@ export const LEVELS = [
     party: ['kai', 'goro', 'nyx', 'rin', 'sora'],
     heroLevel: 5,
     xp: 150,
+    gold: 300,
     enemies: [
       { id: 'varg', lv: 7, r: 3, c: 5, ai: 'guard', aggro: 8 },
       { id: 'imp', lv: 5, r: 6, c: 4, ai: 'guard', aggro: 7 },

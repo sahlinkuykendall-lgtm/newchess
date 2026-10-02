@@ -1,5 +1,6 @@
 // Pure game rules. No DOM access here so it can be unit-tested in Node.
 import { UNITS, SKILLS, BASIC_ATTACK, GROWTH, aspectMult } from './data.js';
+import { gearBonus } from './items.js';
 
 export const DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
 export const SP_MAX = 100;
@@ -41,9 +42,10 @@ export function statsAt(templateId, lv = 1, mult = 1) {
   };
 }
 
-export function createUnit(templateId, team, r, c, facing, { lv = 1, mult = 1 } = {}) {
+export function createUnit(templateId, team, r, c, facing, { lv = 1, mult = 1, gear = null } = {}) {
   const t = UNITS[templateId];
   const st = statsAt(templateId, lv, mult);
+  const g = gearBonus(gear ?? {});
   return {
     id: `${templateId}-${nextId++}`,
     templateId,
@@ -53,12 +55,15 @@ export function createUnit(templateId, team, r, c, facing, { lv = 1, mult = 1 } 
     aspect: t.aspect,
     look: t.look,
     lv,
-    maxHp: st.hp,
-    hp: st.hp,
-    atk: st.atk,
-    def: st.def,
-    mov: t.mov,
-    jump: t.jump,
+    gear: gear ?? {},
+    maxHp: st.hp + g.hp,
+    hp: st.hp + g.hp,
+    atk: st.atk + g.atk,
+    def: st.def + g.def,
+    mov: t.mov + g.mov,
+    jump: t.jump + g.jump,
+    regen: g.regen,
+    spRegen: g.spRegen,
     range: t.range,
     backstab: t.backstab ?? DEFAULT_BACKSTAB,
     passive: t.passive?.id ?? null,
@@ -67,7 +72,7 @@ export function createUnit(templateId, team, r, c, facing, { lv = 1, mult = 1 } 
     aggro: 0,
     skills: t.skills ?? [],
     ult: t.ult ?? null,
-    sp: 20,
+    sp: Math.min(100, 20 + g.sp),
     r, c,
     facing: facing ?? { dr: team === 'hero' ? -1 : 1, dc: 0 },
     moved: false,
@@ -84,7 +89,7 @@ export function createBattle(level, { squad = null, difficulty = 'normal' } = {}
   const mult = DIFFICULTY[difficulty] ?? 1;
   const units = [
     ...party.slice(0, level.spawns.length).map((h, i) =>
-      createUnit(h.id, 'hero', level.spawns[i].r, level.spawns[i].c, level.spawns[i].facing, { lv: h.lv })),
+      createUnit(h.id, 'hero', level.spawns[i].r, level.spawns[i].c, level.spawns[i].facing, { lv: h.lv, gear: h.gear })),
     ...level.enemies.map(s => Object.assign(
       createUnit(s.id, 'enemy', s.r, s.c, s.facing, { lv: s.lv ?? 1, mult: mult * (s.mult ?? 1) }),
       s.ai ? { ai: s.ai, aggro: s.aggro ?? 6 } : {})),
@@ -408,7 +413,12 @@ export function startPhase(state, team) {
   for (const u of livingUnits(state, team)) {
     u.moved = false;
     u.acted = false;
-    u.sp = Math.min(SP_MAX, u.sp + SP_PER_TURN);
+    u.sp = Math.min(SP_MAX, u.sp + SP_PER_TURN + (u.spRegen ?? 0));
+    if (u.regen && u.hp < u.maxHp) {
+      const amount = Math.min(u.regen, u.maxHp - u.hp);
+      u.hp += amount;
+      events.push({ type: 'heal', passive: 'healingLeaf', targetId: u.id, amount });
+    }
     const t = tileAt(state, u.r, u.c);
     if (t.type === 'lava' && u.passive !== 'fireborn') {
       const amount = Math.min(LAVA_DAMAGE, u.hp);
