@@ -58,10 +58,22 @@ export const SKILLS = {
   infernoWaltz: { name: 'Inferno Waltz', kind: 'damage', ult: true, cost: 100, power: 2.2, range: [1, 4], area: 2, desc: 'A fire dance that sets the field ablaze.' },
 };
 
+// Board 2 enemies
+Object.assign(SKILLS, {
+  searingBite: { name: 'Searing Bite', kind: 'damage', cost: 25, power: 1.35, range: [1, 1], area: 0, desc: 'Burning jaws.' },
+  hexBolt: { name: 'Hex Bolt', kind: 'damage', cost: 25, power: 1.05, range: [2, 4], area: 0, pierce: true, desc: 'A curse that ignores armor.' },
+  darkMend: { name: 'Dark Mend', kind: 'heal', cost: 35, power: 0.9, range: [0, 3], area: 1, desc: 'Knits allies back together with shadow.' },
+  magmaSlam: { name: 'Magma Slam', kind: 'damage', cost: 35, power: 1.3, range: [0, 0], area: 1, desc: 'Erupts on everyone next to it.' },
+  infernoClaw: { name: 'Inferno Claw', kind: 'damage', cost: 25, power: 1.35, range: [1, 2], area: 0, desc: 'A sweeping claw of fire.' },
+  cataclysm: { name: 'Cataclysm', kind: 'damage', ult: true, cost: 100, power: 1.7, range: [1, 4], area: 2, desc: 'The ground itself explodes.' },
+});
+
 // Stat gain per level above 1 (heroes and enemies alike).
 export const GROWTH = { hp: 6, atk: 1.2, def: 0.8 };
 export const MAX_LEVEL = 20;
-export const XP_PER_LEVEL = 100;
+export const XP_PER_LEVEL = 100; // XP for Lv1 → Lv2
+// XP needed to go from `lv` to `lv + 1`: 100, 120, 140, … so higher levels take longer.
+export const xpToNext = lv => 80 + 20 * lv;
 
 export const BASIC_ATTACK = { name: 'Attack', kind: 'damage', cost: 0, power: 1, area: 0 };
 
@@ -153,6 +165,34 @@ export const UNITS = {
     skills: ['mudSlam'],
     passive: { id: 'sludgeBody', name: 'Sludge Body', desc: 'Takes 25% less damage from ranged attacks — the mud swallows them.' },
     look: { art: 'brute', skin: '#3f8a7a', hair: '#2a5f55', outfit: '#244a42', accent: '#7fe0c8' },
+  },
+  hound: {
+    name: 'Hellhound', title: 'Hunter', aspect: 'blaze',
+    hp: 62, atk: 23, def: 8, mov: 6, jump: 2, range: [1, 1],
+    skills: ['searingBite'],
+    passive: { id: 'packHunter', name: 'Pack Hunter', desc: '+25% damage when another enemy is already next to its target.' },
+    look: { art: 'hound', skin: '#3a2a2e', hair: '#ff6a1f', outfit: '#1d1418', accent: '#ffb347' },
+  },
+  witch: {
+    name: 'Ash Witch', title: 'Hexer', aspect: 'umbra',
+    hp: 58, atk: 22, def: 7, mov: 4, jump: 2, range: [2, 3],
+    skills: ['hexBolt', 'darkMend'],
+    passive: { id: 'cinderVeil', name: 'Cinder Veil', desc: 'Takes 25% less damage from area attacks.' },
+    look: { art: 'witch', skin: '#cfc2d6', hair: '#2b2236', outfit: '#3a2f4a', accent: '#b06cff' },
+  },
+  golem: {
+    name: 'Magma Golem', title: 'Juggernaut', aspect: 'stone',
+    hp: 130, atk: 23, def: 19, mov: 3, jump: 1, range: [1, 1],
+    skills: ['magmaSlam'],
+    passive: { id: 'moltenCore', name: 'Molten Core', desc: 'Anyone who hits it up close takes 6 burn damage.' },
+    look: { art: 'golem', skin: '#4a4048', hair: '#ff6a1f', outfit: '#2e2830', accent: '#ffb347' },
+  },
+  ignis: {
+    name: 'Ignis', title: 'Ember Tyrant', aspect: 'blaze',
+    hp: 220, atk: 26, def: 17, mov: 4, jump: 3, range: [1, 2],
+    skills: ['infernoClaw'], ult: 'cataclysm',
+    passive: { id: 'tyrant', name: 'Tyrant', desc: 'Takes 30% less damage while any of his minions still stand.' },
+    look: { art: 'ignis', skin: '#8a2a1a', hair: '#ffb347', outfit: '#2a1410', accent: '#ffd23f' },
   },
   gargoyle: {
     name: 'Gargoyle', title: 'Flier', aspect: 'stone',

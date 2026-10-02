@@ -313,3 +313,47 @@ test('gear: gold, buying, equipping and stat bonuses', async () => {
   startPhase(s, 'hero');
   assert.equal(leaf.hp, 26, 'Healing Leaf heals 6 per turn');
 });
+
+test('missions: checkmate and survive', () => {
+  const kennels = LEVELS.find(l => l.id === 'kennels');
+  const s = createBattle(kennels);
+  const alpha = s.units.find(u => u.leader);
+  assert.ok(alpha);
+  assert.equal(outcome(s), null);
+  alpha.alive = false;
+  assert.equal(outcome(s), 'victory', 'KO the leader wins even with enemies left');
+
+  const pass = LEVELS.find(l => l.id === 'pass');
+  const p = createBattle(pass);
+  p.phase = 'hero'; p.turn = pass.missionType.turns;
+  assert.equal(outcome(p), null);
+  p.turn = pass.missionType.turns + 1;
+  assert.equal(outcome(p), 'victory', 'surviving the turns wins');
+});
+
+test('board 2 passives: Pack Hunter, Molten Core, Tyrant, Cinder Veil', () => {
+  const h1 = createUnit('hound', 'enemy', 1, 1);
+  const h2 = createUnit('hound', 'enemy', 2, 2);
+  const kai = createUnit('kai', 'hero', 1, 2, { dr: 0, dc: -1 });
+  const alone = resolveAction(battle([h1, kai]), h1, getAction(h1, 'attack'), { r: 1, c: 2 }).events[0].amount;
+  const pack = resolveAction(battle([h1, h2, kai]), h1, getAction(h1, 'attack'), { r: 1, c: 2 }).events[0].amount;
+  assert.ok(pack > alone, 'Pack Hunter bonus');
+
+  const golem = createUnit('golem', 'enemy', 3, 3);
+  const goro = createUnit('goro', 'hero', 3, 2);
+  const burn = resolveAction(battle([golem, goro]), goro, getAction(goro, 'attack'), { r: 3, c: 3 }).events.find(e => e.burn);
+  assert.equal(burn?.amount, 6, 'Molten Core burns melee attackers');
+
+  const ignis = createUnit('ignis', 'enemy', 0, 0);
+  const guard = createUnit('golem', 'enemy', 5, 5);
+  const sora = createUnit('sora', 'hero', 0, 3);
+  const guarded = resolveAction(battle([ignis, guard, sora]), sora, getAction(sora, 'attack'), { r: 0, c: 0 }).events[0].amount;
+  const alone2 = resolveAction(battle([ignis, sora]), sora, getAction(sora, 'attack'), { r: 0, c: 0 }).events[0].amount;
+  assert.ok(guarded < alone2, 'Tyrant shield while minions stand');
+
+  const witch = createUnit('witch', 'enemy', 2, 2);
+  const pip = createUnit('pip', 'hero', 2, 5); pip.sp = 100;
+  const single = hitDamage(pip, witch, 1.3).amount;
+  const area = resolveAction(battle([witch, pip]), pip, getAction(pip, 'gustBomb'), { r: 2, c: 2 }).events[0].amount;
+  assert.ok(area < single, 'Cinder Veil softens area attacks');
+});

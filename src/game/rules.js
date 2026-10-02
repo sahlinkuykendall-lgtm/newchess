@@ -22,8 +22,12 @@ export const DAWNBREAKER = 1.25;
 export const RIPOSTE_POWER = 0.6;
 export const SIBLING_BOND = 1.2;
 export const DIFFICULTY = { easy: 0.85, normal: 1, hard: 1.15 };
+export const PACK_HUNTER = 1.25;
+export const CINDER_VEIL = 0.75;
+export const MOLTEN_BURN = 6;
+export const TYRANT_GUARD = 0.7;
 
-const IMPASSABLE = new Set(['water', 'pillar', 'tree', 'rock', 'obsidian', 'boulder']);
+const IMPASSABLE = new Set(['water', 'pillar', 'tree', 'rock', 'obsidian', 'boulder', 'basalt']);
 
 export const key = (r, c) => `${r},${c}`;
 export const manhattan = (a, b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
@@ -92,9 +96,11 @@ export function createBattle(level, { squad = null, difficulty = 'normal' } = {}
       createUnit(h.id, 'hero', level.spawns[i].r, level.spawns[i].c, level.spawns[i].facing, { lv: h.lv, gear: h.gear })),
     ...level.enemies.map(s => Object.assign(
       createUnit(s.id, 'enemy', s.r, s.c, s.facing, { lv: s.lv ?? 1, mult: mult * (s.mult ?? 1) }),
-      s.ai ? { ai: s.ai, aggro: s.aggro ?? 6 } : {})),
+      s.ai ? { ai: s.ai, aggro: s.aggro ?? 6 } : {},
+      s.leader ? { leader: true } : {},
+      s.name ? { name: s.name } : {})),
   ];
-  return { map: { rows: tiles.length, cols: tiles[0].length, tiles }, units, phase: 'hero', turn: 1, alert: false };
+  return { map: { rows: tiles.length, cols: tiles[0].length, tiles }, units, phase: 'hero', turn: 1, alert: false, mission: level.missionType ?? { type: 'rout' } };
 }
 
 export function tileAt(state, r, c) {
@@ -318,7 +324,13 @@ export function resolveAction(state, unit, action, target) {
     let dealt = false;
     const bond = bondBonus(state, unit);
     for (const t of targets) {
-      const h = hitDamage(unit, t, action.power, { pierce: action.pierce, defHp: hp.get(t.id), mult: bond });
+      let mult = bond;
+      // Hellhound Pack Hunter: another ally already next to the target.
+      if (unit.passive === 'packHunter' && state.units.some(a => a.alive && a.team === unit.team && a.id !== unit.id && manhattan(a, t) === 1)) mult *= PACK_HUNTER;
+      if (t.passive === 'cinderVeil' && action.area > 0) mult *= CINDER_VEIL;
+      // Ignis takes reduced damage while his minions stand.
+      if (t.passive === 'tyrant' && state.units.some(a => a.alive && a.team === t.team && a.id !== t.id)) mult *= TYRANT_GUARD;
+      const h = hitDamage(unit, t, action.power, { pierce: action.pierce, defHp: hp.get(t.id), mult });
       const amount = Math.min(h.amount, hp.get(t.id));
       hp.set(t.id, hp.get(t.id) - amount);
       dealt = true;
@@ -341,6 +353,14 @@ export function resolveAction(state, unit, action, target) {
         hp.set(t.id, hp.get(t.id) - amount);
         addSp(a.id, SP_ON_ASSIST);
         events.push({ type: 'hit', assist: true, sourceId: a.id, targetId: t.id, amount, back: false, aspect: aspectMult(a.aspect, t.aspect), ko: hp.get(t.id) <= 0 });
+      }
+    }
+    // Magma Golem Molten Core: touching it burns.
+    for (const t of targets) {
+      if (t.passive === 'moltenCore' && manhattan(unit, t) === 1 && hp.get(unit.id) > 0) {
+        const amount = Math.min(MOLTEN_BURN, hp.get(unit.id));
+        hp.set(unit.id, hp.get(unit.id) - amount);
+        events.push({ type: 'hit', counter: true, burn: true, sourceId: t.id, targetId: unit.id, amount, back: false, aspect: 1, ko: hp.get(unit.id) <= 0 });
       }
     }
     // Mako's Riposte: survive a close-range single hit and strike back.
@@ -443,8 +463,19 @@ export function startPhase(state, team) {
   return events;
 }
 
+// Missions: rout (KO everyone), checkmate (KO the leader), survive (last N turns).
 export function outcome(state) {
-  if (livingUnits(state, 'enemy').length === 0) return 'victory';
   if (livingUnits(state, 'hero').length === 0) return 'defeat';
+  if (livingUnits(state, 'enemy').length === 0) return 'victory';
+  const m = state.mission;
+  if (m?.type === 'checkmate' && !state.units.some(u => u.alive && u.leader)) return 'victory';
+  if (m?.type === 'survive' && state.phase === 'hero' && state.turn > m.turns) return 'victory';
   return null;
+}
+
+export function missionText(state) {
+  const m = state.mission;
+  if (m?.type === 'checkmate') return `Checkmate: KO ${state.units.find(u => u.leader)?.name ?? 'the leader'}`;
+  if (m?.type === 'survive') return `Survive: turn ${Math.min(state.turn, m.turns)}/${m.turns}`;
+  return `Rout: ${livingUnits(state, 'enemy').length} enemies left`;
 }

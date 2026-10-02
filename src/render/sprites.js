@@ -921,7 +921,193 @@ function hana(ctx, L, back, t) {
   fill(ctx, '#ffd23f', rr(ctx, 4, hy - 13.5, 4, 2, 0.8), 0.7);
 }
 
-const ART = { kai, goro, rin, sora, nyx, aiko, mako, pip, hana, varg, imp, brute, gargoyle };
+
+function hound(ctx, L, back, t) {
+  const run = Math.sin(t / 140);
+  const fl = Math.sin(t / 90);
+  const fur = L.skin, flame = L.hair;
+  // flaming tail
+  fill(ctx, flame, () => { ctx.moveTo(-12, -16); ctx.quadraticCurveTo(-22, -20 + fl, -21, -30); ctx.quadraticCurveTo(-17, -24, -14, -25); ctx.quadraticCurveTo(-16, -19, -11, -14); ctx.closePath(); }, 1);
+  fill(ctx, '#ffe066', () => { ctx.moveTo(-14, -17); ctx.quadraticCurveTo(-19, -22, -19, -27); ctx.quadraticCurveTo(-15, -22, -13, -16); ctx.closePath(); }, null);
+  // back legs
+  limb(ctx, shade(fur, -0.1), [[-9, -12], [-11, -6 + run], [-9, -1]], 4.5);
+  limb(ctx, shade(fur, -0.1), [[7, -12], [9, -6 - run], [8, -1]], 4.5);
+  // body
+  const body = () => ctx.ellipse(-1, -15, 13, 7.5, -0.08, 0, Math.PI * 2);
+  fill(ctx, fur, body, 1.4);
+  crescent(ctx, body, shade(fur, -0.12), -1, -15, 12);
+  // glowing cracks in the hide
+  ctx.save(); ctx.shadowColor = flame; ctx.shadowBlur = 5;
+  line(ctx, flame, 1.1, () => { ctx.moveTo(-6, -19); ctx.lineTo(-3, -15); ctx.lineTo(-5, -11); ctx.moveTo(2, -20); ctx.lineTo(4, -16); });
+  ctx.restore();
+  // front legs
+  limb(ctx, fur, [[-6, -10], [-7, -4 - run], [-6, -1]], 4.5);
+  limb(ctx, fur, [[6, -10], [7, -4 + run], [7, -1]], 4.5);
+  for (const x of [-6, 7]) fill(ctx, '#e8e2d0', poly(ctx, [[x - 2, -1], [x + 2.5, -1], [x + 1, 0.8]]), 0.5);
+  // head + mane of fire
+  const hy = -22;
+  fill(ctx, flame, () => { ctx.moveTo(4, hy - 4); ctx.lineTo(3, hy - 13 + fl); ctx.lineTo(7, hy - 8); ctx.lineTo(9, hy - 15 - fl); ctx.lineTo(11, hy - 7); ctx.lineTo(15, hy - 11); ctx.lineTo(13, hy - 2); ctx.closePath(); }, 1);
+  fill(ctx, fur, () => ctx.ellipse(10, hy, 7, 6, 0, 0, Math.PI * 2), 1.3);
+  fill(ctx, fur, poly(ctx, [[8, hy - 4], [9, hy - 12], [12, hy - 5]]), 1);
+  if (!back) {
+    fill(ctx, shade(fur, 0.2), () => { ctx.moveTo(12, hy); ctx.quadraticCurveTo(20, hy - 1, 21, hy + 3); ctx.quadraticCurveTo(18, hy + 6, 12, hy + 5); ctx.closePath(); }, 1.1);
+    fill(ctx, INK, oval(ctx, 20.5, hy + 1.5, 1.4, 1), null);
+    for (const x of [14, 17]) fill(ctx, '#fff', poly(ctx, [[x, hy + 4.6], [x + 1.4, hy + 4.6], [x + 0.7, hy + 6.8]]), 0.4);
+    ctx.save(); ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 6;
+    fill(ctx, '#ffd23f', poly(ctx, [[10, hy - 2.5], [14, hy - 3.5], [13.5, hy - 1]]), 0.6);
+    ctx.restore();
+  }
+}
+
+function witch(ctx, L, back, t) {
+  const hy = -40;
+  const sway = Math.sin(t / 420) * 1.6;
+  const bob = Math.sin(t / 380) * 1.4;
+  const staff = () => {
+    line(ctx, INK, 3, () => { ctx.moveTo(13, 0); ctx.lineTo(15, -46); });
+    line(ctx, '#3a2a20', 1.7, () => { ctx.moveTo(13, 0); ctx.lineTo(15, -46); });
+    ctx.save(); ctx.shadowColor = L.accent; ctx.shadowBlur = 8;
+    fill(ctx, L.accent, circle(ctx, 15, -50 + bob, 3.6), 1);
+    ctx.restore();
+    fill(ctx, '#e9d5ff', circle(ctx, 14, -51 + bob, 1.1), null);
+    line(ctx, '#3a2a20', 1.2, () => { ctx.moveTo(15, -46); ctx.quadraticCurveTo(10, -48, 12, -53); ctx.moveTo(15, -46); ctx.quadraticCurveTo(20, -48, 18, -53); });
+  };
+  if (back) staff();
+  // long tattered robe
+  const robe = () => { ctx.moveTo(-7, -30); ctx.lineTo(7, -30); ctx.lineTo(12, 0); for (let i = 0; i <= 6; i++) ctx.lineTo(12 - i * 4, (i % 2 ? -3 : 0) + (i === 3 ? sway : 0)); ctx.closePath(); };
+  fill(ctx, L.outfit, robe, 1.4);
+  shadeIn(ctx, robe, shade(L.outfit, -0.1), () => ctx.rect(-13, -30, 7, 31));
+  // ash embers rising
+  for (let i = 0; i < 3; i++) {
+    const p = ((t / 1100 + i / 3) % 1);
+    ctx.save(); ctx.globalAlpha *= 1 - p;
+    fill(ctx, '#c9b8d8', circle(ctx, -8 + i * 7 + Math.sin(p * 5) * 2, -4 - p * 26, 0.9), null);
+    ctx.restore();
+  }
+  fill(ctx, L.accent, rr(ctx, -7, -20, 14, 2.6, 1), 0.9);
+  // bony arms
+  limb(ctx, L.skin, [[-6, -27], [-10, -20], [-8, -15]], 3);
+  limb(ctx, L.skin, [[6, -27], [11, -22], [13, -22]], 3);
+  if (!back) staff();
+  // head + wild hair + pointed hat
+  head(ctx, L.skin, 0, hy, 10.5);
+  if (!back) {
+    eyes(ctx, 3, hy + 1, '#b06cff', { mood: 'sly' });
+    mouth(ctx, 4.5, hy + 6.5, 'smirk');
+    line(ctx, shade(L.skin, -0.3), 0.7, () => { ctx.moveTo(-3, hy + 3); ctx.lineTo(-1, hy + 2); });
+  }
+  fill(ctx, L.hair, () => { ctx.moveTo(-11, hy - 2); ctx.lineTo(-15, hy + 10 + sway); ctx.lineTo(-11, hy + 8); ctx.lineTo(-12, hy + 15 + sway); ctx.lineTo(-7, hy + 6); ctx.quadraticCurveTo(-9, hy, -8, hy - 3); ctx.closePath(); }, 1.1);
+  if (back) fill(ctx, L.hair, () => ctx.arc(0, hy, 10.6, 0, Math.PI * 2), 1.2);
+  fill(ctx, L.outfit, () => { ctx.moveTo(-15, hy - 5); ctx.quadraticCurveTo(0, hy - 10, 15, hy - 5); ctx.quadraticCurveTo(0, hy - 2, -15, hy - 5); }, 1.2);
+  fill(ctx, L.outfit, () => { ctx.moveTo(-8, hy - 7); ctx.quadraticCurveTo(-2, hy - 20, -6 + sway, hy - 28); ctx.quadraticCurveTo(4, hy - 18, 8, hy - 7); ctx.closePath(); }, 1.2);
+  line(ctx, L.accent, 1.3, () => { ctx.moveTo(-8, hy - 8.5); ctx.quadraticCurveTo(0, hy - 11, 8, hy - 8.5); });
+}
+
+function golem(ctx, L, back, t) {
+  const glow = 0.6 + 0.4 * Math.sin(t / 300);
+  const rock = L.skin, dark = shade(L.skin, -0.15), lava = L.hair;
+  const crackFx = draw => { ctx.save(); ctx.shadowColor = lava; ctx.shadowBlur = 6 * glow; line(ctx, lava, 1.3, draw); ctx.restore(); };
+  ctx.save(); ctx.scale(1.12, 1.12);
+  // legs
+  fill(ctx, dark, rr(ctx, -11, -13, 9, 13, 2.5), 1.3);
+  fill(ctx, dark, rr(ctx, 2, -13, 9, 13, 2.5), 1.3);
+  // huge torso of stacked rock
+  const torso = () => { ctx.moveTo(-14, -14); ctx.lineTo(-16, -30); ctx.lineTo(-9, -38); ctx.lineTo(8, -39); ctx.lineTo(16, -31); ctx.lineTo(14, -14); ctx.closePath(); };
+  fill(ctx, rock, torso, 1.6);
+  shadeIn(ctx, torso, dark, () => ctx.rect(-17, -40, 8, 27));
+  crackFx(() => { ctx.moveTo(-6, -36); ctx.lineTo(-2, -29); ctx.lineTo(-5, -22); ctx.lineTo(-1, -16); ctx.moveTo(6, -34); ctx.lineTo(3, -27); ctx.lineTo(8, -21); });
+  // molten core
+  ctx.save(); ctx.shadowColor = lava; ctx.shadowBlur = 10 * glow;
+  fill(ctx, '#ffd23f', circle(ctx, 0, -25, 3.2), null);
+  ctx.restore();
+  // boulder fists
+  fill(ctx, rock, () => ctx.ellipse(-19, -16, 6.5, 7.5, 0.2, 0, Math.PI * 2), 1.5);
+  fill(ctx, rock, () => ctx.ellipse(19, -17, 7, 8, -0.2, 0, Math.PI * 2), 1.5);
+  crackFx(() => { ctx.moveTo(17, -21); ctx.lineTo(20, -16); ctx.moveTo(-21, -19); ctx.lineTo(-18, -14); });
+  // small head sunk into the shoulders
+  const hy = -40;
+  fill(ctx, rock, () => { ctx.moveTo(-7, hy + 3); ctx.lineTo(-6, hy - 6); ctx.lineTo(6, hy - 7); ctx.lineTo(8, hy + 3); ctx.closePath(); }, 1.4);
+  if (!back) {
+    ctx.save(); ctx.shadowColor = lava; ctx.shadowBlur = 6;
+    fill(ctx, '#ffb347', rr(ctx, -4, hy - 3, 3.5, 2, 0.8), null);
+    fill(ctx, '#ffb347', rr(ctx, 2, hy - 3.2, 4, 2, 0.8), null);
+    ctx.restore();
+  }
+  // smoke wisp
+  ctx.save(); ctx.globalAlpha *= 0.4;
+  const p = (t / 1400) % 1;
+  fill(ctx, '#8a8090', circle(ctx, 4 + p * 4, hy - 9 - p * 14, 2 + p * 3), null);
+  ctx.restore();
+  ctx.restore();
+}
+
+function ignis(ctx, L, back, t) {
+  const hy = -46;
+  const fl = Math.sin(t / 110);
+  const sway = Math.sin(t / 400) * 1.5;
+  const scale = L.skin, gold = L.accent;
+  ctx.save(); ctx.scale(1.15, 1.15);
+  // fiery wings
+  for (const s of [-1, 1]) {
+    fill(ctx, '#7a1d12', () => { ctx.moveTo(s * 6, -34); ctx.lineTo(s * 28, -52 - fl); ctx.lineTo(s * 24, -42); ctx.lineTo(s * 31, -36 - fl); ctx.lineTo(s * 24, -30); ctx.lineTo(s * 27, -22); ctx.quadraticCurveTo(s * 16, -26, s * 9, -22); ctx.closePath(); }, 1.3);
+    ctx.save(); ctx.shadowColor = '#ff6a1f'; ctx.shadowBlur = 6;
+    line(ctx, '#ff8a3d', 0.9, () => { ctx.moveTo(s * 9, -31); ctx.lineTo(s * 27, -50 - fl); ctx.moveTo(s * 10, -28); ctx.lineTo(s * 30, -36 - fl); });
+    ctx.restore();
+  }
+  // tail
+  line(ctx, INK, 5, () => { ctx.moveTo(-5, -10); ctx.quadraticCurveTo(-22, -6 + sway, -24, -18); });
+  line(ctx, scale, 3, () => { ctx.moveTo(-5, -10); ctx.quadraticCurveTo(-22, -6 + sway, -24, -18); });
+  fill(ctx, '#ffb347', () => { ctx.moveTo(-24, -17); ctx.quadraticCurveTo(-29, -24, -24 + fl, -30); ctx.quadraticCurveTo(-20, -24, -24, -17); }, 0.9);
+  // legs
+  limb(ctx, shade(scale, -0.1), [[-5, -15], [-7, -8], [-5, -2]], 6);
+  limb(ctx, shade(scale, -0.1), [[5, -15], [7, -8], [6, -2]], 6);
+  for (const x of [-5, 6]) fill(ctx, '#2a1410', poly(ctx, [[x - 4, 0], [x + 4, 0], [x, -3]]), 0.8);
+  // armored chest
+  const chest = () => { ctx.moveTo(-11, -36); ctx.lineTo(11, -36); ctx.lineTo(9, -14); ctx.quadraticCurveTo(0, -11, -9, -14); ctx.closePath(); };
+  fill(ctx, scale, chest, 1.5);
+  fill(ctx, L.outfit, () => { ctx.moveTo(-9, -34); ctx.lineTo(9, -34); ctx.lineTo(7, -20); ctx.lineTo(-7, -20); ctx.closePath(); }, 1.2);
+  if (!back) {
+    ctx.save(); ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 8;
+    fill(ctx, '#ffd23f', () => { ctx.moveTo(0, -31); ctx.lineTo(3, -27); ctx.lineTo(0, -23); ctx.lineTo(-3, -27); ctx.closePath(); }, 0.9);
+    ctx.restore();
+  }
+  fill(ctx, gold, rr(ctx, -10, -17, 20, 3, 1.2), 1);
+  // golden pauldrons with horns
+  for (const s of [-1, 1]) {
+    fill(ctx, gold, () => { ctx.moveTo(s * 6, -37); ctx.quadraticCurveTo(s * 16, -40, s * 16, -31); ctx.lineTo(s * 8, -31); ctx.closePath(); }, 1.2);
+    fill(ctx, '#f4e2c4', poly(ctx, [[s * 13, -38], [s * 18, -44], [s * 15, -36]]), 0.8);
+  }
+  // clawed arms
+  limb(ctx, scale, [[-11, -33], [-15, -25], [-14, -19]], 5.5);
+  limb(ctx, scale, [[11, -33], [16, -27], [18, -31]], 5.5);
+  for (const dx of [0, 2, 4]) fill(ctx, '#f4e2c4', poly(ctx, [[16.5 + dx, -32], [18 + dx, -32], [18.5 + dx, -36.5]]), 0.5);
+  // fireball in the raised claw
+  ctx.save(); ctx.shadowColor = '#ff6a1f'; ctx.shadowBlur = 10;
+  const g = ctx.createRadialGradient(20, -40, 0.5, 20, -40, 5);
+  g.addColorStop(0, '#fffbe0'); g.addColorStop(0.5, '#ffd23f'); g.addColorStop(1, '#ff6a1f');
+  fill(ctx, g, circle(ctx, 20, -40, 4.2 + fl * 0.4), null);
+  ctx.restore();
+  // dragon head + crown of horns
+  fill(ctx, scale, () => { ctx.moveTo(-8, hy + 6); ctx.quadraticCurveTo(-10, hy - 8, 0, hy - 9); ctx.quadraticCurveTo(10, hy - 8, 9, hy + 2); ctx.closePath(); }, 1.4);
+  crescent(ctx, circle(ctx, 0, hy - 1, 9.5), shade(scale, -0.12), 0, hy - 1, 9);
+  for (const [x, h] of [[-6, 10], [-2, 13], [3, 13], [7, 10]]) fill(ctx, gold, poly(ctx, [[x - 1.6, hy - 7], [x + 1.6, hy - 7], [x + (x > 0 ? 1.5 : -1.5), hy - 7 - h * 0.7]]), 0.8);
+  if (!back) {
+    fill(ctx, shade(scale, 0.18), () => { ctx.moveTo(3, hy + 1); ctx.quadraticCurveTo(14, hy, 15, hy + 4); ctx.quadraticCurveTo(12, hy + 8, 3, hy + 7); ctx.closePath(); }, 1.2);
+    fill(ctx, INK, oval(ctx, 14, hy + 2.2, 1.2, 0.8), null);
+    for (const x of [6, 10]) fill(ctx, '#fff', poly(ctx, [[x, hy + 6.6], [x + 1.4, hy + 6.6], [x + 0.7, hy + 8.6]]), 0.4);
+    ctx.save(); ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 8;
+    fill(ctx, '#ffd23f', poly(ctx, [[-1, hy - 2], [5, hy - 3.5], [4.5, hy - 0.5]]), 0.7);
+    ctx.restore();
+    // smoke from the nostrils
+    ctx.save(); ctx.globalAlpha *= 0.35;
+    const p = (t / 900) % 1;
+    fill(ctx, '#9a8f9e', circle(ctx, 16 + p * 5, hy + 1 - p * 8, 1 + p * 2.5), null);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+const ART = { kai, goro, rin, sora, nyx, aiko, mako, pip, hana, varg, imp, brute, gargoyle, hound, witch, golem, ignis };
 
 // Draw a unit with its feet at (0,0) of the current transform.
 // facing: grid direction; south/east face the camera, north/west show the back.

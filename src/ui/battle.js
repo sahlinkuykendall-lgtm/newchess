@@ -262,8 +262,8 @@ export class Battle {
       if (e.assist || e.counter) {
         const helper = R.unitById(this.state, e.sourceId);
         helper.facing = R.dirToward(helper, t) ?? helper.facing;
-        b.floatText(helper, e.counter ? 'RIPOSTE!' : 'COMBO!', e.counter ? '#7fd8ff' : '#e3b5ff');
-        await b.lunge(helper, t);
+        b.floatText(helper, e.burn ? 'MOLTEN!' : e.counter ? 'RIPOSTE!' : 'COMBO!', e.burn ? '#ff8a3d' : e.counter ? '#7fd8ff' : '#e3b5ff');
+        if (!e.burn) await b.lunge(helper, t);
       }
       R.applyEvent(this.state, e);
       if (e.type === 'heal') {
@@ -461,7 +461,7 @@ export class Battle {
   renderTopbar() {
     const pill = $('turn-pill');
     const enemy = this.state.phase === 'enemy';
-    pill.textContent = `Turn ${this.state.turn} · ${enemy ? 'Enemy turn' : 'Your move'}`;
+    pill.textContent = `Turn ${this.state.turn} · ${enemy ? 'Enemy turn' : 'Your move'} · ${R.missionText(this.state)}`;
     pill.classList.toggle('enemy', enemy);
     $('btn-end').disabled = enemy || this.mode === 'busy' || this.mode === 'over';
   }

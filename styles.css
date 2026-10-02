@@ -200,6 +200,13 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .rules { padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .rules b { color: var(--text); }
 
+/* ---------- Board tabs ---------- */
+.camp-boards { display: flex; gap: 8px; flex: none; overflow-x: auto; }
+.board-tab { flex: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); font-weight: 800; font-size: 13px; }
+.board-tab.on { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.board-tab:disabled { opacity: 0.4; }
+.stage-tag { color: #ffab91; }
+
 /* ---------- Armory ---------- */
 .camp-actions { display: flex; gap: 8px; align-items: center; flex: none !important; }
 .gold-pill { background: rgba(255,210,63,0.12); border: 1px solid rgba(255,210,63,0.5); color: var(--gold); border-radius: 999px; padding: 6px 12px; font-weight: 900; font-size: 14px; white-space: nowrap; }

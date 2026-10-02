@@ -1,6 +1,6 @@
 // Campaign map (stage select) and squad select screens.
 import { LEVELS } from '../game/levels.js';
-import { UNITS, ASPECTS, XP_PER_LEVEL } from '../game/data.js';
+import { UNITS, ASPECTS, xpToNext } from '../game/data.js';
 import { heroInfo, isStageUnlocked, squadEntry, heroGear } from '../game/progress.js';
 import { ITEMS, SLOTS, SLOT_ICONS } from '../game/items.js';
 import { renderPortrait } from '../render/sprites.js';
@@ -9,18 +9,38 @@ import { HERO_IDS } from './profile.js';
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
-const ENEMY_ICON = { varg: '🐺', imp: '😈', brute: '🐸', gargoyle: '🗿' };
+const ENEMY_ICON = { varg: '🐺', imp: '😈', brute: '🐸', gargoyle: '🗿', hound: '🐕', witch: '🧙', golem: '🪨', ignis: '🐉' };
+const MISSION_TAG = { checkmate: '♚ Checkmate', survive: '⏳ Survive' };
+let boardShown = null;
 
 export function showCampaign(save, onPick) {
+  const boards = [...new Set(LEVELS.map(l => l.boardNo))];
+  const boardOpen = b => isStageUnlocked(save, LEVELS.findIndex(l => l.boardNo === b));
+  // default to the board with the first uncleared stage
+  const next = LEVELS.findIndex(l => !save.cleared[l.id]);
+  if (boardShown === null || !boardOpen(boardShown)) boardShown = LEVELS[next >= 0 ? next : LEVELS.length - 1].boardNo;
+
+  $('camp-boards').innerHTML = boards.map(b => {
+    const first = LEVELS.find(l => l.boardNo === b);
+    const open = boardOpen(b);
+    return `<button class="board-tab ${b === boardShown ? 'on' : ''}" data-board="${b}" ${open ? '' : 'disabled'}>${open ? '' : '🔒 '}Board ${b} · ${esc(first.board)}</button>`;
+  }).join('');
+  $('camp-boards').onclick = e => {
+    const b = e.target.closest('.board-tab');
+    if (b && !b.disabled) { boardShown = Number(b.dataset.board); showCampaign(save, onPick); }
+  };
+
   const el = $('camp-stages');
-  el.innerHTML = LEVELS.map((lv, i) => {
+  const items = LEVELS.map((lv, i) => ({ lv, i })).filter(x => x.lv.boardNo === boardShown);
+  el.innerHTML = items.map(({ lv, i }) => {
     const open = isStageUnlocked(save, i);
     const done = !!save.cleared[lv.id];
     const foes = {};
     for (const e of lv.enemies) foes[e.id] = (foes[e.id] ?? 0) + 1;
     const foeText = Object.entries(foes).map(([id, n]) => `${ENEMY_ICON[id] ?? '•'}×${n}`).join(' ');
+    const tag = MISSION_TAG[lv.missionType?.type];
     return `<button class="stage ${open ? '' : 'locked'} ${done ? 'done' : ''} ${lv.boss ? 'boss' : ''}" data-i="${i}" ${open ? '' : 'disabled'}>
-      <div class="stage-num">${esc(lv.stage)}</div>
+      <div class="stage-num">${esc(lv.stage)}${tag ? ` · <span class="stage-tag">${tag}</span>` : ''}</div>
       <div class="stage-name">${lv.boss ? '👑 ' : ''}${esc(lv.name)}</div>
       <div class="stage-foes">${open ? foeText : '🔒 Clear the previous stage'}</div>
       <div class="stage-rec">Suggested Lv ${lv.heroLevel ?? 1}${done ? ' · ✓ Cleared' : ''}</div>
@@ -30,11 +50,9 @@ export function showCampaign(save, onPick) {
     const b = e.target.closest('.stage');
     if (b && !b.disabled) onPick(Number(b.dataset.i));
   };
-  $('camp-board').textContent = `Board 1 · ${LEVELS[0].board}`;
+  $('camp-board').textContent = `Board ${boardShown} · ${items[0].lv.board}`;
   $('camp-gold').textContent = `🪙 ${save.gold ?? 0}`;
   $('campaign').classList.remove('hidden');
-  // scroll to the first uncleared stage
-  const next = LEVELS.findIndex(l => !save.cleared[l.id]);
   el.querySelector(`[data-i="${Math.max(0, next)}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
@@ -61,7 +79,7 @@ export function showSquad(save, level, onFight) {
         <canvas class="sq-art"></canvas>
         <b>${esc(t.name)} <span class="sq-lv">Lv ${h.lv}</span></b>
         <small>${esc(t.title)} · ${ASPECTS[t.aspect].glyph}</small>
-        <div class="sq-xp"><i style="width:${(h.xp / XP_PER_LEVEL) * 100}%"></i></div>
+        <div class="sq-xp"><i style="width:${(h.xp / xpToNext(h.lv)) * 100}%"></i></div>
         <div class="sq-gear">${SLOTS.map(s => { const g = heroGear(save, id)[s]; return `<span class="${g ? 'on' : ''}" title="${g ? ITEMS[g].name : 'empty'}">${SLOT_ICONS[s]}</span>`; }).join('')}</div>
       </button>`;
     }).join('');

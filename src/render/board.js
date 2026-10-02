@@ -18,11 +18,13 @@ const PALETTE = {
   shrine: { top: '#d9cf9c', top2: '#d9cf9c', left: '#7a5638', right: '#634529', rim: '#a99b5f' },
   sand: { top: '#dcc68f', top2: '#d3bd84', left: '#9b7b4c', right: '#86693e', rim: '#c4ad73' },
   dirt: { top: '#a98257', top2: '#a07a4f', left: '#7a5638', right: '#634529', rim: '#8d6a45' },
+  ash: { top: '#5a524d', top2: '#534b46', left: '#3a3330', right: '#2e2826', rim: '#463f3b' },
+  basalt: { top: '#4a4553', top2: '#4a4553', left: '#2c2833', right: '#221f28', rim: '#3a3542' },
   bridge: { top: '#b07a42', top2: '#a8733d', left: '#6e4724', right: '#5b3a1c', rim: '#7d5229' },
 };
 // Tiles drawn on top of another ground type.
-const GROUND = { tree: 'grass', rock: 'grass', obsidian: 'dirt', boulder: 'stone' };
-const TALL = new Set(['pillar', 'tree']);
+const GROUND = { tree: 'grass', rock: 'grass', obsidian: 'ash', boulder: 'stone' };
+const TALL = new Set(['pillar', 'tree', 'basalt']);
 
 // Tile highlights: fill, outline color, dashed outline, icon, pulse.
 const OVERLAY = {
@@ -624,9 +626,13 @@ export class Board {
       ctx.restore();
     }
 
-    // HP bar
+    // HP bar (+ crown for mission leaders)
     if (u.alive) {
       const x = p.x - 14, y = p.y - 58 + v.dy;
+      if (u.leader) {
+        ctx.font = '12px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText('👑', p.x, y - 3);
+      }
       ctx.fillStyle = 'rgba(10,8,20,0.8)';
       ctx.fillRect(x - 1, y - 1, 30, 6);
       const f = u.hp / u.maxHp;

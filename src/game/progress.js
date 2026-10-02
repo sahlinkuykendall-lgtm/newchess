@@ -1,7 +1,7 @@
 // Campaign progress: unlocked heroes, hero levels/XP and cleared stages.
 // Saved in localStorage on this device.
 import { LEVELS } from './levels.js';
-import { XP_PER_LEVEL, MAX_LEVEL } from './data.js';
+import { xpToNext, MAX_LEVEL } from './data.js';
 import { ITEMS, SLOTS } from './items.js';
 
 const KEY = 'gambit-arena:save';
@@ -48,7 +48,7 @@ export function awardVictory(save, level, squadIds) {
     const h = { ...heroInfo(save, id) };
     const from = h.lv;
     h.xp += xp;
-    while (h.xp >= XP_PER_LEVEL && h.lv < MAX_LEVEL) { h.xp -= XP_PER_LEVEL; h.lv++; }
+    while (h.xp >= xpToNext(h.lv) && h.lv < MAX_LEVEL) { h.xp -= xpToNext(h.lv); h.lv++; }
     if (h.lv >= MAX_LEVEL) h.xp = 0;
     save.heroes[id] = h;
     levelUps.push({ id, from, to: h.lv, xp: h.xp });

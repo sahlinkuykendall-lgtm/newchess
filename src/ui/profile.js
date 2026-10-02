@@ -7,7 +7,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
 export const HERO_IDS = ['kai', 'goro', 'rin', 'sora', 'nyx', 'aiko', 'pip', 'hana', 'mako'];
-export const ENEMY_IDS = ['varg', 'imp', 'brute', 'gargoyle'];
+export const ENEMY_IDS = ['varg', 'imp', 'brute', 'gargoyle', 'ignis', 'hound', 'witch', 'golem'];
 
 const STAT_MAX = { hp: 130, atk: 30, def: 20, mov: 7, jump: 5 };
 
@@ -103,10 +103,10 @@ export function closeProfile() {
 }
 
 // unlocked: hero ids the player has recruited (others show as silhouettes).
-export function openRoster(unlocked = HERO_IDS) {
+export function openRoster(unlocked = HERO_IDS, seenEnemies = ENEMY_IDS) {
   const card = id => {
     const t = UNITS[id];
-    if (HERO_IDS.includes(id) && !unlocked.includes(id)) {
+    if ((HERO_IDS.includes(id) && !unlocked.includes(id)) || (ENEMY_IDS.includes(id) && !seenEnemies.includes(id))) {
       return `<div class="roster-item locked"><div class="roster-q">?</div><span>???</span><small>Joins later</small></div>`;
     }
     return `<button class="roster-item" data-id="${id}" style="--asp:${ASPECTS[t.aspect].color}">

@@ -145,11 +145,38 @@ needs grinding a level or two — or sharp tactics. A thoughtful human beats the
 
 ### Progression rules
 - You start with **Kai, Goro, Rin, Sora**; the squad grows to 9 heroes. Pick up to 5 per battle.
-- **XP:** every hero who fought gets the stage's XP (100–150) on a win; 100 XP = 1 level. Replays give 60%.
+- **XP:** every hero who fought gets the stage's XP on a win; each level needs 20 XP more than the last (100, 120, …). Replays give 60%.
 - New recruits join at the next stage's suggested level.
 - **Growth per level:** +6 HP, +1.2 ATK, +0.8 DEF (enemies use the same table, so enemy "Lv" is comparable).
 - **Difficulty:** Easy ×0.85 / Normal ×1 / Hard ×1.15 enemy HP & ATK.
 - Progress saves on the device (Settings → Reset Progress to start over).
+
+## Board 2 — Ember Wastes (v0.7)
+Unlocks after beating Varg. Ignis, the Ember Tyrant, rules here.
+
+| Stage | Map | Mission | Enemies (level) | Suggested Lv |
+|-------|-----|---------|-----------------|--------------|
+| 2-1 | Ash Road (18×18) — lava canal, causeways | Rout | 3 hellhounds, witch, golem, imp (6) | 6 |
+| 2-2 | Hound Kennels (18×18) — walled pens | **Checkmate**: KO the Pack Alpha | Alpha (10, ×1.5), 4 hounds, witch (7) | 7 |
+| 2-3 | Witch's Caldera (18×18) — crater ringed by a ridge | Rout | 2 witches, 2 golems, hound, gargoyle (6–7) | 8 |
+| 2-4 | Obsidian Pass (20×16) — narrow canyon | **Survive** 5 turns | 8-strong army (7–8) | 9 |
+| 2-5 👑 | Tyrant's Throne (20×20) — dais in a lava moat | Rout | Ignis (8) + golems, witches, hounds (7) | 10 |
+
+New terrain: **ash** ground and tall **basalt** columns (block movement, fade when something is behind them).
+
+New enemies:
+- **Hellhound** — fast pack hunter. *Pack Hunter*: +25% damage if another enemy is already next to its target.
+- **Ash Witch** — ranged hexer and healer (Hex Bolt ignores DEF, Dark Mend heals an area). *Cinder Veil*: −25% from area attacks.
+- **Magma Golem** — slow juggernaut. *Molten Core*: anyone who hits it up close takes 6 burn damage.
+- **Ignis, the Ember Tyrant** — boss. *Tyrant*: −30% damage taken while any minion stands. Ultimate *Cataclysm* (area 2).
+
+Missions: **Rout** (KO everyone), **Checkmate** (KO the 👑 leader), **Survive** (last N turns). The objective
+shows in the top bar during battle.
+
+XP now rises per level (100, 120, 140, … per level) and stage XP is set so a first clear ≈ one level —
+you reach each stage at its suggested level and grinding gives you the edge.
+
+Measured on Normal at the suggested level (48 runs): 2-1 67% · 2-2 79% · 2-3 50% · 2-4 69% · **Ignis 17%** (25% at +1, 40% at +2).
 
 ## Gold & gear (v0.6)
 - Every win pays **gold** (1-1: 120 → 1-5: 300; replays 60%). You start with 100.
@@ -193,7 +220,7 @@ or tap any unit's info card in battle. Full text lives in `src/game/characters.j
 
 ## Roadmap
 - **v0 (now):** one 5v5 battle, isometric board, moves/attacks/skills/ultimates, AI, cut-ins, chiptune, PWA install.
-- **v1:** ✅ campaign map, XP/levels, saving, squad select, 5 stages, gold & gear shop · next: Board 2, more mission types.
+- **v1:** ✅ campaign map, XP/levels, saving, squad select, gold & gear shop, Board 2 with Checkmate/Survive missions.
 - **v2:** recruitable roster to 20+, transformations, Extra Battles, Endless mode.
 - **v3:** Tournament mode, daily/puzzle challenges, pass-and-play.
 - **v4:** online multiplayer (needs a server), real art pass, public release.

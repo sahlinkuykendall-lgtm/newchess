@@ -5,8 +5,8 @@ import { audio } from './audio.js';
 import { bindProfileUi, openRoster } from './ui/profile.js';
 import { showCampaign, hideCampaign, showSquad, hideSquad } from './ui/campaign.js';
 import { showArmory, hideArmory, bindArmory } from './ui/armory.js';
-import { loadSave, resetSave, awardVictory, squadEntry } from './game/progress.js';
-import { UNITS, XP_PER_LEVEL } from './game/data.js';
+import { loadSave, resetSave, awardVictory, squadEntry, isStageUnlocked } from './game/progress.js';
+import { UNITS, xpToNext } from './game/data.js';
 import { renderPortrait } from './render/sprites.js';
 import { VERSION, VERSION_NOTE, ASSETS } from './version.js';
 
@@ -146,10 +146,11 @@ async function handleEnd(result, { level, squadIds }) {
         <canvas data-id="${u.id}"></canvas>
         <span class="res-name">${esc(UNITS[u.id].name)}</span>
         <span class="res-lv">Lv ${u.from}${u.to > u.from ? ` → <b>${u.to}</b> <em>LEVEL UP!</em>` : ''}</span>
-        <div class="res-xp"><i style="width:${(u.xp / XP_PER_LEVEL) * 100}%"></i></div>
+        <div class="res-xp"><i style="width:${(u.xp / xpToNext(u.to)) * 100}%"></i></div>
       </div>`).join('') + '</div>';
     for (const id of r.joined) html += `<div class="res-join">✨ <b>${esc(UNITS[id].name)}</b> joined your team!</div>`;
-    if (!next) html += '<div class="res-join">👑 Board 1 complete! More boards are coming.</div>';
+    if (next && next.boardNo !== level.boardNo) html += `<div class="res-join">🗺 <b>Board ${next.boardNo}: ${esc(next.board)}</b> unlocked!</div>`;
+    if (!next) html += '<div class="res-join">👑 Every board cleared! More are coming.</div>';
   } else {
     title.textContent = 'DEFEAT';
     html = `<p class="res-sub">Your squad was knocked out.</p>
@@ -172,6 +173,8 @@ async function handleEnd(result, { level, squadIds }) {
 $('btn-start').addEventListener('click', () => { audio.sfx('click'); openCampaign(); });
 $('btn-camp-back').addEventListener('click', () => { audio.sfx('click'); toTitle(); });
 $('btn-squad-back').addEventListener('click', () => { audio.sfx('click'); openCampaign(); });
+// Enemies you've met: everything in stages you can play.
+const seenEnemies = () => [...new Set(LEVELS.filter((l, i) => isStageUnlocked(save, i)).flatMap(l => l.enemies.map(e => e.id)))];
 bindArmory();
 const armorySound = n => audio.sfx(n);
 $('btn-camp-armory').addEventListener('click', () => {
@@ -184,7 +187,7 @@ $('btn-squad-armory').addEventListener('click', () => {
   hideSquad();
   showArmory(save, { onSound: armorySound, onBack: () => openSquad(idx) });
 });
-$('btn-camp-roster').addEventListener('click', () => { audio.sfx('click'); openRoster(save.unlocked); });
+$('btn-camp-roster').addEventListener('click', () => { audio.sfx('click'); openRoster(save.unlocked, seenEnemies()); });
 $('btn-next').addEventListener('click', () => { audio.sfx('click'); battle.stop(); openSquad(current.index + 1); });
 $('btn-retry').addEventListener('click', () => {
   audio.sfx('click');
@@ -234,7 +237,7 @@ $('btn-rotate-switch').addEventListener('click', () => {
   saveSettings(); applySettings(); layout();
 });
 bindProfileUi(() => audio.sfx('click'));
-$('btn-roster').addEventListener('click', () => { audio.unlock(); audio.sfx('click'); openRoster(save.unlocked); });
+$('btn-roster').addEventListener('click', () => { audio.unlock(); audio.sfx('click'); openRoster(save.unlocked, seenEnemies()); });
 $('btn-help').addEventListener('click', () => { audio.sfx('click'); $('help').classList.remove('hidden'); });
 $('btn-help-close').addEventListener('click', () => { audio.sfx('click'); $('help').classList.add('hidden'); });
 
