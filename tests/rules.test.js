@@ -4,6 +4,7 @@ import { aspectMult } from '../src/game/data.js';
 import {
   createBattle, createUnit, reachable, key, isBehind, hitDamage, resolveAction, applyPlan, actionRange,
   getAction, validTargets, startPhase, outcome, moveUnit, livingUnits, bondBonus,
+  rangeTiles, effectTiles, affectedUnits, areaTiles, shapeLabel, moveLabel, pathTo,
 } from '../src/game/rules.js';
 import { planTurn } from '../src/game/ai.js';
 import { LEVELS } from '../src/game/levels.js';
@@ -167,8 +168,8 @@ test('passives: Sora Eagle Eye, Rin Tidal Grace, Imp Fireborn, Varg Bloodlust', 
   tiles[5][5].type = 'lava';
   const sora = createUnit('sora', 'hero', 0, 0);
   const s = battle([sora], tiles);
-  assert.deepEqual(actionRange(s, sora, { r: 0, c: 0 }, getAction(sora, 'attack')), [2, 5]);
-  assert.deepEqual(actionRange(s, sora, { r: 3, c: 3 }, getAction(sora, 'attack')), [2, 4]);
+  assert.deepEqual(actionRange(s, sora, { r: 0, c: 0 }, getAction(sora, 'attack')), [2, 6]);
+  assert.deepEqual(actionRange(s, sora, { r: 3, c: 3 }, getAction(sora, 'attack')), [2, 5]);
 
   const rin = createUnit('rin', 'hero', 3, 3);
   const kai = createUnit('kai', 'hero', 3, 4);
@@ -356,4 +357,89 @@ test('board 2 passives: Pack Hunter, Molten Core, Tyrant, Cinder Veil', () => {
   const single = hitDamage(pip, witch, 1.3).amount;
   const area = resolveAction(battle([witch, pip]), pip, getAction(pip, 'gustBomb'), { r: 2, c: 2 }).events[0].amount;
   assert.ok(area < single, 'Cinder Veil softens area attacks');
+});
+
+const has = (list, r, c) => list.some(p => p.r === r && p.c === c);
+
+test('movement styles: walk, bishop, king, rush lines, knight leaps, terrain cost', () => {
+  const big = () => flat(13, 13);
+  // Kai walks 5 in 4 directions.
+  const kai = createUnit('kai', 'hero', 6, 6);
+  let n = reachable(battle([kai], big()), kai);
+  assert.ok(n.has(key(1, 6)) && !n.has(key(0, 6)));
+  assert.ok(n.has(key(4, 3)) && !n.has(key(3, 3)), 'diagonal costs 2 for walkers');
+  // Rin (bishop 4): diagonals are cheap, straight lines expensive.
+  const rin = createUnit('rin', 'hero', 6, 6);
+  n = reachable(battle([rin], big()), rin);
+  assert.ok(n.has(key(2, 2)), '4 diagonal steps');
+  assert.ok(n.has(key(2, 6)) && !n.has(key(2, 5)), 'zig-zags reach same-colour tiles; others cost 2 per straight step');
+  // Aiko (king 4): 8 directions at 1 each.
+  const aiko = createUnit('aiko', 'hero', 6, 6);
+  n = reachable(battle([aiko], big()), aiko);
+  assert.ok(n.has(key(2, 2)) && n.has(key(2, 6)) && !n.has(key(1, 6)));
+  // Goro: walk 3, or rush 6 in a straight line.
+  const goro = createUnit('goro', 'hero', 6, 6);
+  n = reachable(battle([goro], big()), goro);
+  assert.ok(n.has(key(0, 6)) && n.has(key(6, 12)), 'straight rush 6');
+  assert.ok(!n.has(key(2, 5)), 'off-line tiles need walking');
+  assert.ok(n.has(key(4, 5)));
+  // Sora: glide 5 in any of 8 lines, else walk 2.
+  const sora = createUnit('sora', 'hero', 6, 6);
+  n = reachable(battle([sora], big()), sora);
+  assert.ok(n.has(key(1, 1)) && n.has(key(6, 11)) && !n.has(key(3, 5)));
+  // Nyx: knight leaps hop over walls and enemies.
+  const tiles = big();
+  for (let c = 0; c < 13; c++) tiles[5][c] = { type: 'pillar', h: 3 };
+  const nyx = createUnit('nyx', 'hero', 6, 6);
+  const walker = createUnit('kai', 'hero', 6, 7);
+  const s = battle([nyx, walker], tiles);
+  n = reachable(s, nyx);
+  assert.ok(n.has(key(4, 5)) && n.get(key(4, 5)).leap, 'leaps the wall');
+  assert.ok(!reachable(s, walker).has(key(4, 7)), 'walkers cannot');
+  const path = pathTo(n, 4, 5);
+  assert.equal(path.length, 2);
+  // Terrain: sand costs 2, climbing costs extra.
+  const t2 = flat(3, 8);
+  t2[1][2] = { type: 'sand', h: 0 };
+  t2[1][3] = { type: 'grass', h: 2 };
+  const k2 = createUnit('kai', 'hero', 1, 1);
+  n = reachable(battle([k2], t2), k2);
+  assert.equal(n.get(key(1, 2)).cost, 2);
+  assert.equal(n.get(key(1, 3)).cost, 5, 'two steps to get beside it, then 1 + 2 to climb 2 levels');
+  assert.match(moveLabel(goro), /rush 6/);
+  assert.match(moveLabel(rin), /Diagonal 4/);
+});
+
+test('attack shapes: lines, diagonals, knight, ring, cones and beams', () => {
+  const tiles = flat(9, 9);
+  tiles[4][2] = { type: 'pillar', h: 3 };
+  const at = { r: 4, c: 4 };
+  const s = battle([], tiles);
+  const aiko = createUnit('aiko', 'hero', 4, 4);
+  const spear = rangeTiles(s, aiko, at, getAction(aiko, 'attack'));
+  assert.ok(has(spear, 2, 4) && has(spear, 4, 6) && !has(spear, 3, 3) && spear.length === 8);
+  const rin = createUnit('rin', 'hero', 4, 4);
+  const bolt = rangeTiles(s, rin, at, getAction(rin, 'attack'));
+  assert.ok(has(bolt, 3, 3) && has(bolt, 2, 6) && !has(bolt, 3, 4));
+  const nyx = createUnit('nyx', 'hero', 4, 4);
+  const fang = rangeTiles(s, nyx, at, getAction(nyx, 'nightFang'));
+  assert.ok(fang.length === 8 && has(fang, 2, 5) && has(fang, 5, 6));
+  const mako = createUnit('mako', 'hero', 4, 4);
+  assert.equal(rangeTiles(s, mako, at, getAction(mako, 'attack')).length, 8);
+  // The pillar stops Sora's arrows to the west.
+  const sora = createUnit('sora', 'hero', 4, 4);
+  const arrows = rangeTiles(s, sora, at, getAction(sora, 'attack'));
+  assert.ok(has(arrows, 4, 2) && !has(arrows, 4, 1) && has(arrows, 0, 0) && has(arrows, 4, 8));
+  // Beams hit everyone in the line; cones hit 1 + 3.
+  const imps = [[3, 4], [2, 4], [1, 4], [2, 3], [2, 5]].map(([r, c]) => createUnit('imp', 'enemy', r, c));
+  const s2 = battle([aiko, ...imps], flat(9, 9));
+  assert.equal(affectedUnits(s2, aiko, getAction(aiko, 'starpierce'), { r: 3, c: 4 }).length, 3);
+  assert.equal(affectedUnits(s2, aiko, getAction(aiko, 'dawnSweep'), { r: 3, c: 4 }).length, 4);
+  assert.equal(effectTiles(s2, aiko, getAction(aiko, 'dawnSweep'), { r: 4, c: 5 }).length, 4);
+  // Beams aren't single-target: no assists.
+  const plan = resolveAction(s2, aiko, getAction(aiko, 'starpierce'), { r: 2, c: 4 });
+  assert.ok(!plan.events.some(e => e.assist));
+  assert.equal(areaTiles(s2, at, 2, 'cross').length, 9);
+  assert.equal(areaTiles(s2, at, 1, 'square').length, 9);
+  assert.match(shapeLabel(getAction(sora, 'piercingGale')), /2–6 tiles · straight beam/);
 });

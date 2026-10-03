@@ -1,7 +1,7 @@
 // The app's version. When you ship an update, bump VERSION here AND in
 // version.json — the app compares the two to know a newer build is online.
-export const VERSION = '0.7.0';
-export const VERSION_NOTE = 'Board 2: Ember Wastes';
+export const VERSION = '0.8.0';
+export const VERSION_NOTE = 'Chess-piece movement & attack shapes';
 
 // Every file the app needs (also listed in sw.js — a test keeps them in sync).
 export const ASSETS = [

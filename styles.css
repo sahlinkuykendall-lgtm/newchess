@@ -98,6 +98,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .uc-stats { grid-column: 1 / -1; display: flex; gap: 6px; justify-content: space-between; color: var(--muted); font-size: 11px; font-weight: 700; margin-top: 2px; }
 .uc-stats b { color: var(--text); }
 .uc-stats span { white-space: nowrap; }
+.uc-move { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1px; color: var(--text); font-size: 10.5px; font-weight: 700; opacity: 0.9; }
 
 #actions {
   position: absolute; right: calc(10px + var(--safe-r)); bottom: calc(10px + var(--safe-b));
@@ -410,6 +411,7 @@ div.sq-art { display: grid; place-items: center; font-size: 40px; font-weight: 9
 .pf-stats { display: grid; gap: 4px; }
 .pf-stat { display: grid; grid-template-columns: 52px 1fr 54px; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: var(--muted); }
 .pf-stat b { color: var(--text); text-align: right; }
+.pf-movestyle { font-size: 11.5px; font-weight: 700; color: var(--text); opacity: 0.85; margin: -2px 0 2px; }
 .pf-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
 .pf-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #7c3aed, #4cc3ff); }
 .pf-move { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 6px; background: rgba(255,255,255,0.03); }

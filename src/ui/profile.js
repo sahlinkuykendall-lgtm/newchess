@@ -2,6 +2,7 @@
 import { UNITS, SKILLS, ASPECTS } from '../game/data.js';
 import { PROFILES } from '../game/characters.js';
 import { renderPortrait } from '../render/sprites.js';
+import { shapeLabel, moveLabel } from '../game/rules.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -10,6 +11,11 @@ export const HERO_IDS = ['kai', 'goro', 'rin', 'sora', 'nyx', 'aiko', 'pip', 'ha
 export const ENEMY_IDS = ['varg', 'imp', 'brute', 'gargoyle', 'ignis', 'hound', 'witch', 'golem'];
 
 const STAT_MAX = { hp: 130, atk: 30, def: 20, mov: 7, jump: 5 };
+const MOVE_HINT = {
+  bishop: ' — like a chess bishop: diagonal steps cost 1, straight steps cost 2.',
+  king: ' — like a chess king: any of 8 directions, 1 MOV each.',
+  fly: ' — ignores terrain cost and water.',
+};
 
 let anim = null;
 function animate(canvas, look, opts) {
@@ -25,12 +31,11 @@ function animate(canvas, look, opts) {
 function rangeText(r) { return r[0] === r[1] ? `${r[0]}` : `${r[0]}–${r[1]}`; }
 
 function moveRow(skill, kind) {
-  const area = skill.area > 0 ? ` · area ${skill.area}` : '';
   const cost = kind === 'ult' ? '100 SP' : `${skill.cost} SP`;
   const extra = [skill.kind === 'heal' ? 'heal' : `power ×${skill.power}`, skill.pierce ? 'ignores DEF' : ''].filter(Boolean).join(' · ');
   return `<div class="pf-move ${kind}">
     <div class="pf-move-head"><b>${kind === 'ult' ? '★ ' : ''}${esc(skill.name)}</b><span>${cost}</span></div>
-    <div class="pf-move-meta">⌖ Reach ${skill.range[1] === 0 ? 'self' : `${rangeText(skill.range)} tile${skill.range[1] > 1 ? 's' : ''}`}${area} · ${extra}</div>
+    <div class="pf-move-meta">⌖ ${esc(shapeLabel(skill))} · ${extra}</div>
     <div class="pf-move-desc">${esc(skill.desc)}</div>
   </div>`;
 }
@@ -43,6 +48,7 @@ function statBar(label, value, max, shown = value) {
 // Open a character's profile. `unit` (optional) shows live battle HP/SP.
 export function openProfile(id, unit = null) {
   const t = UNITS[id], p = PROFILES[id];
+  const atk = { name: 'Attack', range: t.range, ...(t.attack ?? {}) };
   if (!t || !p) return;
   const asp = ASPECTS[t.aspect];
   const enemy = ENEMY_IDS.includes(id);
@@ -71,13 +77,14 @@ export function openProfile(id, unit = null) {
           ${unit ? statBar('SP', unit.sp, 100, `${unit.sp}/100`) : ''}
           ${statBar('ATK', t.atk, STAT_MAX.atk)}
           ${statBar('DEF', t.def, STAT_MAX.def)}
-          ${statBar('MOV', t.mov, STAT_MAX.mov)}
+          ${statBar('MOV', t.mov, STAT_MAX.mov, `${t.mov}`)}
+          <div class="pf-movestyle">🦶 ${esc(moveLabel({ mov: t.mov, move: t.move, moveRule: { step: t.flier ? 'fly' : 'walk', ...(t.move ?? {}) } }))}${MOVE_HINT[t.move?.step] ?? ''}</div>
           ${statBar('JUMP', Math.min(t.jump, 5), STAT_MAX.jump, t.flier ? 'Flies' : t.jump)}
-          ${statBar('REACH', t.range[1], 5, rangeText(t.range))}
+          ${statBar('REACH', atk.range[1], 6, rangeText(atk.range))}
         </div>
 
         <div class="pf-section">Moves</div>
-        ${moveRow({ name: 'Attack', kind: 'damage', cost: 0, power: 1, area: 0, range: t.range, desc: 'Basic attack. Free, and charges SP.' }, 'basic').replace('0 SP', 'Free')}
+        ${moveRow({ kind: 'damage', cost: 0, power: 1, area: 0, ...atk, desc: 'Basic attack. Free, and charges SP.' }, 'basic').replace('0 SP', 'Free')}
         ${t.skills.map(k => moveRow(SKILLS[k], 'skill')).join('')}
         ${t.ult ? moveRow(SKILLS[t.ult], 'ult') : ''}
 

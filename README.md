@@ -33,7 +33,11 @@ Note: a Home Screen app has its own storage — clearing Safari's data does not 
 - A forecast shows the exact damage. Tap the target again (or **Confirm**) to strike.
 - **Undo** a move before you act. **Wait** to end that unit's turn. **End Turn** when you're done.
 - Highlights: **blue** = where you can move, **red dashed** = where you could attack, **⌖** = targets in reach now.
-- Every Attack/Skill/Ultimate button shows its **Reach** in tiles and its **Area**.
+- Every hero **moves like a chess piece**: Rin and Pip go diagonally (bishop), Aiko any way (king),
+  Goro rushes in straight lines (rook), Sora glides along 8 lines (queen), Nyx and Mako make knight leaps.
+  Sand, lava and climbing cost extra movement.
+- Every Attack/Skill/Ultimate button shows its **reach and shape**: straight lines, diagonals,
+  knight L-jumps, cones, beams that hit a whole line, and blasts.
 - Tap an enemy to see its stats and the purple zone it can reach next turn.
 - Tap the unit card (ⓘ) for a full profile: story, passive ability and every move.
 - **Characters** on the title screen shows the whole roster.

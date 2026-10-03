@@ -52,7 +52,7 @@ gear, levels, elements and flashy special moves.
 ## Core rules (v0)
 
 - **Turns:** Player phase → Enemy phase. Each unit may **Move** once and **Act** once (Attack, Skill, Ultimate or Wait). You can **Undo** a move until you act.
-- **Movement:** up to `MOV` tiles; can climb/drop up to `JUMP` height; can pass through allies, not enemies.
+- **Movement:** spend up to `MOV` points; can climb/drop up to `JUMP` height; can pass through allies, not enemies. Each unit moves in its own style (see *Movement & attack shapes*).
 - **Damage (deterministic):** `(ATK × power − DEF) × aspect × backstab`, minimum 1. The forecast you see is exactly what happens.
 - **Backstab:** attacking from behind the target's facing direction. Units face the way they last moved/attacked.
 - **Assist (combo):** every other ally adjacent to the target adds a follow-up hit.
@@ -192,6 +192,37 @@ Measured on Normal at the suggested level (48 runs): 2-1 67% · 2-2 79% · 2-3 5
 
 Gear is the reward for grinding: the difficulty numbers below are measured *without* gear.
 
+## Movement & attack shapes (v0.8)
+Inspired by *Tournament Tactics*, where every fighter had their own move range and attack
+pattern, each unit now moves and attacks like a chess piece. All of it is in `rules.js`
+(`reachable`, `rangeTiles`, `effectTiles`), driven by `move` / `attack` / `shape` / `hits` in `data.js`.
+
+**Terrain cost:** each tile costs 1 MOV, sand and lava +1, every level climbed +1. Fliers pay 1 for everything.
+
+| Hero | Moves like | Movement | Attack | Skills | Ultimate |
+|------|------------|----------|--------|--------|----------|
+| Kai | Pawn | Walk 5 | Punch (1) | Flare Fist (1) · Ember Shot (2–4 line) | Phoenix Breaker (beam 1–5) |
+| Goro | Rook | Walk 3, or rush 6 in a straight line | Shield Bash (1) | Quake Slam (all 8 around) · Rock Rush (beam 1–3) | Titan Crash (1–4, cross blast 2) |
+| Rin | Bishop | Diagonal 4 (diagonal steps 1, straight 2) | Water Bolt (diagonals 1–2) | Mending Wave (heal) · Tide Lance (diagonal beam 1–4) | Tidal Requiem (blast 2) |
+| Sora | Queen | Glide 5 along any of 8 lines, or walk 2 | Arrow (8-way lines 2–5) | Piercing Gale (beam 2–6, pierce) · Arrow Rain (3–6, blast 1) | Skyrend Volley (square blast) |
+| Nyx | Knight | Walk 4 with up to 2 knight leaps | Dagger (1) | Night Fang (knight L-jump, pierce) · Venom Kunai (line 2–4, pierce) | Eclipse Edge (1) |
+| Aiko | King | 8-way 4 | Spear (line 1–2) | Starpierce (beam 1–3) · Dawn Sweep (cone) | Heaven’s Lance (cross blast 2) |
+| Pip | Bishop | Diagonal 5 + Light Feet | Slingshot (2–3) | Gust Bomb (blast 1) · Zap Coil (diagonal beam 1–3) | Thunderhead Barrage |
+| Hana | Pawn | Walk 5 | Fan Slap (1–2) | Ember Fan (cone) · Spark Waltz (all 8 around) | Inferno Waltz (self, blast 2) |
+| Mako | Knight | Walk 4 with 1 knight leap | Cutlass (all 8 around) | Riptide Slash (beam 1–2, pierce) · Anchor Throw (line 2–3) | Maelstrom Waltz |
+
+Enemies: Varg and Ignis move like kings and claw in a **cone**; Gargoyles **fly** 6; Golems
+slam all 8 tiles around; Ash Witches shoot in straight lines. Everyone else walks.
+
+**Shapes:** *diamond* (any tile in range), *line* (rook), *diag* (bishop), *star* (queen),
+*knight*, *ring* (8 around). **Beams** hit everyone in the line, **cones** hit 1 tile ahead
+plus 3 across behind it, **blasts** can be diamond, square or cross. Pillars, trees and basalt
+stop anything travelling along a line. Beams, cones and blasts don't get combo assists.
+
+Balance check (AI vs AI, 96 runs, Normal, suggested level): 1-2 73%, 1-3 78%, 1-4 81%,
+1-5 Varg 8% (36% at +1), 2-1 63%, 2-2 72%, 2-3 56%, 2-4 73%, 2-5 Ignis 14% (32% at +1, 55% at +2).
+Every hero lands between 72–78% team win rate when in the squad.
+
 ## Characters
 Every fighter has hand-drawn (procedural) anime art with idle animations, a chess-piece
 sigil, a passive ability and a full story profile — see **Characters** on the title screen,
@@ -220,7 +251,7 @@ or tap any unit's info card in battle. Full text lives in `src/game/characters.j
 
 ## Roadmap
 - **v0 (now):** one 5v5 battle, isometric board, moves/attacks/skills/ultimates, AI, cut-ins, chiptune, PWA install.
-- **v1:** ✅ campaign map, XP/levels, saving, squad select, gold & gear shop, Board 2 with Checkmate/Survive missions.
+- **v1:** ✅ campaign map, XP/levels, saving, squad select, gold & gear shop, Board 2 with Checkmate/Survive missions, chess-piece movement & attack shapes.
 - **v2:** recruitable roster to 20+, transformations, Extra Battles, Endless mode.
 - **v3:** Tournament mode, daily/puzzle challenges, pass-and-play.
 - **v4:** online multiplayer (needs a server), real art pass, public release.

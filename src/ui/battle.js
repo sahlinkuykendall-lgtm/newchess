@@ -239,10 +239,11 @@ export class Battle {
     const color = ASPECTS[u.aspect].color;
     if (action.ult) await this.cutIn(u, action);
 
-    const ranged = action.range[1] > 1 && !(target.r === u.r && target.c === u.c);
+    const ranged = action.range[1] > 1 && action.shape !== 'knight' && !(target.r === u.r && target.c === u.c);
+    const fx = R.effectTiles(this.state, u, action, target);
     if (action.kind === 'heal') {
       audio.sfx('heal');
-      b.areaFx(R.areaTiles(this.state, target, action.area), '#7dffb2');
+      b.areaFx(fx, '#7dffb2');
       await b.wait(250);
     } else if (ranged) {
       await b.projectile(u, target, color);
@@ -252,8 +253,8 @@ export class Battle {
     } else {
       await b.lunge(u, target);
     }
-    if (action.area > 0 && action.kind !== 'heal') {
-      b.areaFx(R.areaTiles(this.state, target, action.area), color);
+    if (!R.isSingle(action) && action.kind !== 'heal') {
+      b.areaFx(fx, color);
       if (action.ult) audio.sfx('boom');
     }
 
@@ -446,7 +447,7 @@ export class Battle {
       set(R.rangeTiles(this.state, this.sel, this.sel, this.action), 'range');
       set(this.targets, this.action.kind === 'heal' ? 'heal' : 'target');
       if (this.pending) {
-        if (this.action.area > 0) set(R.areaTiles(this.state, this.pending.target, this.action.area), 'area');
+        if (!R.isSingle(this.action)) set(R.effectTiles(this.state, this.sel, this.action, this.pending.target), 'area');
         set([this.pending.target], this.action.kind === 'heal' ? 'heal' : 'target');
       }
     }
@@ -480,7 +481,8 @@ export class Battle {
       <div class="bar hp ${enemy ? 'enemy' : ''}"><i style="width:${(u.hp / u.maxHp) * 100}%"></i><b>HP ${u.hp}/${u.maxHp}</b></div>
       <div class="bar sp ${u.sp >= 100 ? 'full' : ''}"><i style="width:${u.sp}%"></i><b>SP ${u.sp}${u.sp >= 100 ? ' · ULTIMATE READY' : ''}</b></div>
       <div class="uc-info">ⓘ</div>
-      <div class="uc-stats"><span>ATK <b>${u.atk}</b></span><span>DEF <b>${u.def}</b></span><span>MOV <b>${u.mov}</b></span><span>JMP <b>${u.jump}</b></span><span>REACH <b>${u.range[0] === u.range[1] ? u.range[1] : `${u.range[0]}–${u.range[1]}`}</b></span></div>`;
+      <div class="uc-stats"><span>ATK <b>${u.atk}</b></span><span>DEF <b>${u.def}</b></span><span>JMP <b>${u.jump}</b></span></div>
+      <div class="uc-move"><span>🦶 ${esc(R.moveLabel(u))}</span><span>⚔ ${esc(R.shapeLabel(R.getAction(u, 'attack')))}</span></div>`;
     const sameUnit = this.cardUnitId === u.id;
     const old = sameUnit ? card.querySelector('#uc-portrait') : null;
     card.innerHTML = html;
@@ -501,7 +503,7 @@ export class Battle {
     const parts = [];
     const atk = R.getAction(u, 'attack');
     const atkOk = R.validTargets(this.state, u, u, atk).length > 0;
-    parts.push(btn('attack', 'Attack', atkOk ? 'Free' : 'no target', { disabled: !atkOk, meta: meta(atk) }));
+    parts.push(btn('attack', atk.name, atkOk ? 'Free' : 'no target', { disabled: !atkOk, meta: meta(atk) }));
     for (const id of u.skills) {
       const a = R.getAction(u, id);
       const none = !R.validTargets(this.state, u, u, a).length;
@@ -516,13 +518,12 @@ export class Battle {
     el.innerHTML = parts.join('');
   }
 
-  // "⌖ Reach 2–4 tiles · Area 1" for an action from the unit's current tile.
+  // "⌖ 2–4 tiles · straight lines · beam hits all in line" from the unit's current tile.
   reachMeta(u, a) {
     const r = R.actionRange(this.state, u, u, a);
     const bonus = r[1] > a.range[1] ? ' <em>+1 high ground</em>' : '';
-    const area = a.area > 0 ? ` · Area ${a.area}` : '';
     const kind = a.kind === 'heal' ? ' · Heals' : '';
-    return `⌖ Reach ${R.rangeLabel(r)}${bonus}${area}${kind}`;
+    return `⌖ ${esc(R.shapeLabel(a, r))}${bonus}${kind}`;
   }
 
   renderForecast() {

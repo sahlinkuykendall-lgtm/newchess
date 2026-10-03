@@ -263,9 +263,11 @@ export class Board {
     for (let i = 1; i < path.length; i++) {
       const a = path[i - 1], b = path[i];
       const ha = this.heightAt(a.r, a.c), hb = this.heightAt(b.r, b.c);
-      const hop = Math.abs(hb - ha) > 0 ? 0.6 : 0.15;
+      // Knight leaps and long steps get a big arc.
+      const leap = Math.abs(b.r - a.r) + Math.abs(b.c - a.c) > 2 || Math.abs(b.r - a.r) > 1 || Math.abs(b.c - a.c) > 1;
+      const hop = leap ? 1.6 : Math.abs(hb - ha) > 0 ? 0.6 : 0.15;
       onStep?.();
-      await this.tween(140, t => {
+      await this.tween(leap ? 260 : 140, t => {
         v.r = a.r + (b.r - a.r) * t;
         v.c = a.c + (b.c - a.c) * t;
         v.h = ha + (hb - ha) * t + Math.sin(t * Math.PI) * hop;
