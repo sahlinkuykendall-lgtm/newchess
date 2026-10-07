@@ -12,10 +12,11 @@ const TIER_HINT = ['', 'after 1-1', 'after 1-3', 'after the 1-5 boss'];
 
 let state = null; // { save, hero, slot, onBack, onSound }
 
-export function showArmory(save, { onBack, onSound = () => {}, hero = null } = {}) {
+export function showArmory(save, { onBack = null, onSound = () => {}, onChange = () => {}, hero = null } = {}) {
   const first = hero && save.unlocked.includes(hero) ? hero : save.unlocked[0];
-  state = { save, hero: first, slot: 'weapon', onBack, onSound };
+  state = { save, hero: first, slot: 'weapon', onBack, onSound, onChange };
   $('armory').classList.remove('hidden');
+  $('btn-armory-back').classList.toggle('hidden', !onBack);
   render();
 }
 
@@ -30,7 +31,6 @@ function wearers(save, itemId, except) {
 
 function render() {
   const { save, hero, slot } = state;
-  $('armory-gold').textContent = `🪙 ${save.gold ?? 0}`;
 
   // hero tabs
   $('armory-heroes').innerHTML = HERO_IDS.filter(id => save.unlocked.includes(id)).map(id =>
@@ -93,7 +93,7 @@ export function bindArmory() {
     const el = e.target.closest('button');
     if (!el || el.disabled) return;
     const { save } = state;
-    if (el.id === 'btn-armory-back') { state.onSound('click'); hideArmory(); state.onBack?.(); return; }
+    if (el.id === 'btn-armory-back') { state.onSound('click'); state.onBack?.(); return; }
     if (el.dataset.hero) { state.hero = el.dataset.hero; state.onSound('click'); }
     else if (el.dataset.slot) { state.slot = el.dataset.slot; state.onSound('click'); }
     else if (el.dataset.buy) {
@@ -106,5 +106,6 @@ export function bindArmory() {
     else if (el.dataset.unequip) { equipItem(save, state.hero, state.slot, null); state.onSound('cancel'); }
     else return;
     render();
+    state.onChange();
   });
 }

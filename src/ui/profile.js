@@ -109,31 +109,7 @@ export function closeProfile() {
   cancelAnimationFrame(anim);
 }
 
-// unlocked: hero ids the player has recruited (others show as silhouettes).
-export function openRoster(unlocked = HERO_IDS, seenEnemies = ENEMY_IDS) {
-  const card = id => {
-    const t = UNITS[id];
-    if ((HERO_IDS.includes(id) && !unlocked.includes(id)) || (ENEMY_IDS.includes(id) && !seenEnemies.includes(id))) {
-      return `<div class="roster-item locked"><div class="roster-q">?</div><span>???</span><small>Joins later</small></div>`;
-    }
-    return `<button class="roster-item" data-id="${id}" style="--asp:${ASPECTS[t.aspect].color}">
-      <canvas></canvas><span>${esc(t.name)}</span><small>${esc(t.title)} · ${esc(PROFILES[id].piece.split(' ')[0])}</small></button>`;
-  };
-  $('roster-heroes').innerHTML = HERO_IDS.map(card).join('');
-  $('roster-enemies').innerHTML = ENEMY_IDS.map(card).join('');
-  $('roster').classList.remove('hidden');
-  for (const el of document.querySelectorAll('.roster-item')) {
-    const c = el.querySelector('canvas');
-    renderPortrait(c, UNITS[el.dataset.id].look, { focus: 'bust', zoom: c.clientHeight / 42, t: 1000 });
-  }
-}
-
 export function bindProfileUi(onClick = () => {}) {
   $('btn-profile-close').addEventListener('click', () => { onClick(); closeProfile(); });
   $('profile').addEventListener('click', e => { if (e.target.id === 'profile') { onClick(); closeProfile(); } });
-  $('btn-roster-close').addEventListener('click', () => { onClick(); $('roster').classList.add('hidden'); });
-  $('roster').addEventListener('click', e => {
-    const b = e.target.closest('.roster-item');
-    if (b) { onClick(); openProfile(b.dataset.id); }
-  });
 }

@@ -23,7 +23,11 @@ Note: a Home Screen app has its own storage — clearing Safari's data does not 
 (a test checks they match), then push to `main`.
 
 ## How to play
-- **Play** opens the campaign. Clear stages in order — each one unlocks the next.
+- **Tap to start**, then use the tab bar at the bottom: **⚔️ Battle** (your next stage and a big Battle button),
+  **🗺️ Story** (the stage map), **🦸 Heroes** (cards and full profiles, plus a Bestiary of enemies you've met),
+  **🛡️ Armory** and **🏆 Modes**. The top bar shows your rank, stages cleared and gold; ⚙ opens Settings.
+- Tap a stage to see its enemies, rewards and suggested level, then **Battle** to pick your squad.
+  Clear stages in order — each one unlocks the next.
 - Before each fight, pick up to 5 heroes. Heroes earn **XP** and **level up** when you win;
   new heroes join as the story goes on. Replay cleared stages to grind (60% XP).
 - Wins pay **gold**. Spend it in the **⚔ Armory** on a weapon, armor and charm for each hero.
@@ -40,7 +44,6 @@ Note: a Home Screen app has its own storage — clearing Safari's data does not 
   knight L-jumps, cones, beams that hit a whole line, and blasts.
 - Tap an enemy to see its stats and the purple zone it can reach next turn.
 - Tap the unit card (ⓘ) for a full profile: story, passive ability and every move.
-- **Characters** on the title screen shows the whole roster.
 - The camera follows the action. Drag to pan, pinch to zoom, tap 🗺 to see the whole map.
 - Tips: hit enemies **from behind** (backstab), stand **next to the target** to add combo hits,
   use the **aspect wheel** (`?` button), heal on the **shrine**, and stay off the **lava**.

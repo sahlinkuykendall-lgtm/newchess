@@ -531,6 +531,8 @@ export class Battle {
     if (this.mode !== 'target' || !this.action) { el.classList.add('hidden'); return; }
     el.classList.remove('hidden');
     const a = this.action;
+    // Just a hint until a target is picked: let taps fall through to the board.
+    el.classList.toggle('hint-only', !this.pending);
     if (!this.pending) {
       el.innerHTML = `<div class="fc-title">${esc(a.name)}</div><div class="fc-reach">${this.reachMeta(this.sel, a)}</div><div class="fc-hint">${esc(a.desc ?? 'Basic attack.')} Tap a target marked with ⌖.</div>`;
       return;

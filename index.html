@@ -13,23 +13,23 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/nunito.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="want-landscape">
   <canvas id="board"></canvas>
 
-  <!-- Title screen -->
-  <section id="title" class="screen">
+  <!-- Splash -->
+  <section id="title" class="screen splash">
+    <div class="splash-rays"></div>
     <div class="logo">
       <div class="logo-kicker">THE GRAND GAMBIT</div>
       <h1>GAMBIT<span>ARENA</span></h1>
     </div>
-    <div class="menu">
-      <button id="btn-start" class="btn big">Play</button>
-      <button id="btn-roster" class="btn ghost">Characters</button>
-      <button id="btn-title-settings" class="btn ghost">Settings</button>
-    </div>
-    <p class="hint">Tip: on iPhone, tap Share → <b>Add to Home Screen</b> for full-screen play.</p>
+    <div id="splash-lineup" class="splash-lineup"></div>
+    <button id="btn-start" class="tap-start">TAP TO START</button>
+    <p class="hint" id="install-hint">On iPhone: Share → <b>Add to Home Screen</b> for full-screen play.</p>
     <p class="version" id="app-version"></p>
   </section>
 
@@ -40,45 +40,68 @@
     <button id="btn-update-later" class="icon-btn" aria-label="Later">✕</button>
   </div>
 
-  <!-- Campaign: stage select -->
-  <section id="campaign" class="screen panel-screen hidden">
-    <div class="camp-head">
-      <button id="btn-camp-back" class="icon-btn" aria-label="Back">‹</button>
-      <div><div class="camp-kicker">THE GRAND GAMBIT</div><h2 id="camp-board">Board 1</h2></div>
-      <div class="camp-actions">
-        <span id="camp-gold" class="gold-pill"></span>
-        <button id="btn-camp-armory" class="btn small">⚔ Armory</button>
-        <button id="btn-camp-roster" class="btn small ghost">Characters</button>
+  <!-- Main menu: top resource bar, tab screens, bottom tab bar -->
+  <div id="shell" class="hidden">
+    <header id="hub-top">
+      <button id="hub-avatar" class="avatar" aria-label="Heroes"><canvas></canvas><span id="hub-lv" class="av-lv">1</span></button>
+      <div class="hub-who">
+        <b>Commander</b>
+        <div class="hub-rank"><span id="hub-rank">Rookie</span><div class="rank-bar"><i id="hub-rank-bar"></i></div></div>
       </div>
-    </div>
-    <div id="camp-boards" class="camp-boards"></div>
-    <div id="camp-stages" class="camp-stages"></div>
-    <p class="hint">Stuck? Replay cleared stages to level up, or try Easy in Settings.</p>
-  </section>
+      <div class="hub-res">
+        <button id="hub-trophy" class="res-chip trophy" aria-label="Stages cleared"><span class="ri">🏆</span><b id="hub-stars">0</b></button>
+        <button id="hub-goldchip" class="res-chip gold" aria-label="Gold"><span class="ri">🪙</span><b id="hub-gold">0</b><i>+</i></button>
+      </div>
+      <button id="hub-settings" class="round-btn" aria-label="Settings">⚙</button>
+    </header>
+
+    <main id="hub-main">
+      <section id="tab-home" class="tab"></section>
+      <section id="tab-story" class="tab hidden"></section>
+      <section id="tab-heroes" class="tab hidden"></section>
+      <section id="tab-modes" class="tab hidden"></section>
+      <!-- Armory: shop + equipment -->
+      <section id="armory" class="tab hidden">
+        <div class="arm-head">
+          <button id="btn-armory-back" class="round-btn" aria-label="Back">‹</button>
+          <div><div class="camp-kicker">BUY · EQUIP</div><h2>Armory</h2></div>
+        </div>
+        <div id="armory-heroes" class="arm-heroes"></div>
+        <div class="arm-body">
+          <div id="armory-hero" class="arm-hero"></div>
+          <div id="armory-items" class="arm-items"></div>
+        </div>
+      </section>
+    </main>
+
+    <nav id="hub-tabs">
+      <button data-tab="armory"><span class="ti">🛡️</span><span class="tl">Armory</span></button>
+      <button data-tab="heroes"><span class="ti">🦸</span><span class="tl">Heroes</span><span id="heroes-badge" class="badge hidden"></span></button>
+      <button data-tab="home" class="center"><span class="ti">⚔️</span><span class="tl">Battle</span></button>
+      <button data-tab="story"><span class="ti">🗺️</span><span class="tl">Story</span></button>
+      <button data-tab="modes"><span class="ti">🏆</span><span class="tl">Modes</span></button>
+    </nav>
+  </div>
+
+  <!-- Stage details (bottom sheet) -->
+  <div id="stage-sheet" class="modal sheet hidden">
+    <div class="sheet-card" id="stage-sheet-body"></div>
+  </div>
 
   <!-- Squad select -->
-  <section id="squad" class="screen panel-screen hidden">
-    <div class="camp-head">
-      <button id="btn-squad-back" class="icon-btn" aria-label="Back">‹</button>
-      <div class="squad-head"><h2 id="squad-title"></h2><div id="squad-sub" class="squad-sub"></div></div>
-      <button id="btn-squad-armory" class="btn small ghost">⚔ Armory</button>
-      <button id="btn-squad-go" class="btn">Fight!</button>
-    </div>
+  <section id="squad" class="screen squad-screen hidden">
+    <header class="sq-top">
+      <button id="btn-squad-back" class="round-btn" aria-label="Back">‹</button>
+      <div class="sq-title"><small id="squad-stage"></small><h2 id="squad-title"></h2></div>
+      <button id="btn-squad-armory" class="btn small">🛡️ Armory</button>
+    </header>
+    <div id="squad-slots" class="formation"></div>
+    <div id="squad-sub" class="sq-info"></div>
     <div id="squad-grid" class="squad-grid"></div>
-  </section>
-
-  <!-- Armory: shop + equipment -->
-  <section id="armory" class="screen panel-screen hidden">
-    <div class="camp-head">
-      <button id="btn-armory-back" class="icon-btn" aria-label="Back">‹</button>
-      <div><div class="camp-kicker">BUY · EQUIP</div><h2>Armory</h2></div>
-      <span id="armory-gold" class="gold-pill"></span>
-    </div>
-    <div id="armory-heroes" class="arm-heroes"></div>
-    <div class="arm-body">
-      <div id="armory-hero" class="arm-hero"></div>
-      <div id="armory-items" class="arm-items"></div>
-    </div>
+    <footer class="sq-foot">
+      <div id="squad-power" class="sq-power"></div>
+      <button id="btn-squad-go" class="btn primary big">FIGHT ▶</button>
+    </footer>
   </section>
 
   <!-- Battle HUD -->
@@ -127,9 +150,9 @@
       <h2 id="result-title"></h2>
       <div id="result-body"></div>
       <div class="menu">
-        <button id="btn-next" class="btn hidden">Next Stage ›</button>
+        <button id="btn-next" class="btn primary hidden">Next Stage ›</button>
         <button id="btn-retry" class="btn ghost">Retry</button>
-        <button id="btn-to-camp" class="btn ghost">Campaign</button>
+        <button id="btn-to-camp" class="btn ghost">Menu</button>
       </div>
     </div>
   </div>
@@ -167,22 +190,10 @@
       </div>
       <p class="update-note">Force update re-downloads the whole game. Your heroes and progress are kept.</p>
       <div class="menu">
-        <button id="btn-settings-close" class="btn">Done</button>
+        <button id="btn-settings-close" class="btn primary">Done</button>
         <button id="btn-forfeit" class="btn ghost hidden">Quit Battle</button>
         <button id="btn-reset" class="btn ghost danger">Reset Progress</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Character roster -->
-  <div id="roster" class="modal hidden">
-    <div class="modal-card roster-card">
-      <h2>Characters</h2>
-      <div class="roster-section">Your Squad</div>
-      <div id="roster-heroes" class="roster-grid"></div>
-      <div class="roster-section enemy">Enemies</div>
-      <div id="roster-enemies" class="roster-grid"></div>
-      <div class="menu"><button id="btn-roster-close" class="btn">Close</button></div>
     </div>
   </div>
 

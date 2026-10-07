@@ -223,6 +223,20 @@ Balance check (AI vs AI, 96 runs, Normal, suggested level): 1-2 73%, 1-3 78%, 1-
 1-5 Varg 8% (36% at +1), 2-1 63%, 2-2 72%, 2-3 56%, 2-4 73%, 2-5 Ignis 14% (32% at +1, 55% at +2).
 Every hero lands between 72–78% team win rate when in the squad.
 
+## Main menu (v0.9)
+Styled like a mobile game hub: a splash screen (logo, hero lineup, *Tap to start*), a top
+resource bar (lead hero avatar, Commander rank from stages cleared, 🏆 stages, 🪙 gold, ⚙) and a
+bottom tab bar — Armory · Heroes · **Battle** (raised centre button) · Story · Modes.
+- **Battle** (home): your lead hero on an animated pedestal (tap for a quote, arrows to swap), the
+  next stage card with board progress, mission, enemies, level check and rewards, and a big Battle button.
+- **Story**: a winding stage map per board; tapping a node opens a bottom sheet with enemies, rewards
+  and the level check.
+- **Heroes**: collectible-style cards with level, aspect and XP; a Bestiary tab for enemies met.
+- **Modes**: Story plus planned modes (Endless, Tournament, Daily, Pass & Play) marked *Soon*.
+- **Squad select**: five formation slots on top, roster below, Fight button with a team-level check.
+Fonts: Lilita One (headings) and Nunito (UI), bundled in `fonts/` (SIL Open Font License).
+Code: `src/ui/hub.js` (menu), `src/ui/campaign.js` (squad select).
+
 ## Characters
 Every fighter has hand-drawn (procedural) anime art with idle animations, a chess-piece
 sigil, a passive ability and a full story profile — see **Characters** on the title screen,
