@@ -4,7 +4,7 @@ import { aspectMult } from '../src/game/data.js';
 import {
   createBattle, createUnit, reachable, key, isBehind, hitDamage, resolveAction, applyPlan, actionRange,
   getAction, validTargets, startPhase, outcome, moveUnit, livingUnits, bondBonus,
-  rangeTiles, effectTiles, affectedUnits, areaTiles, shapeLabel, moveLabel, pathTo,
+  rangeTiles, effectTiles, affectedUnits, areaTiles, shapeLabel, moveLabel, pathTo, isPassable, missionText,
 } from '../src/game/rules.js';
 import { planTurn } from '../src/game/ai.js';
 import { LEVELS } from '../src/game/levels.js';
@@ -442,4 +442,41 @@ test('attack shapes: lines, diagonals, knight, ring, cones and beams', () => {
   assert.equal(areaTiles(s2, at, 2, 'cross').length, 9);
   assert.equal(areaTiles(s2, at, 1, 'square').length, 9);
   assert.match(shapeLabel(getAction(sora, 'piercingGale')), /2–6 tiles · straight beam/);
+});
+
+test('endless arena: waves scale, champions every 5th, rewards bank and survivors regroup', async () => {
+  const { ARENA, makeWave, waveRewards, setupWave, awardWave, isEndlessUnlocked, arenaPool } = await import('../src/game/endless.js');
+  assert.equal(ARENA.tiles.length, 15);
+  for (const row of ARENA.tiles) assert.equal(row.length, 15);
+  const opts = { teamLv: 4, pool: ['imp', 'brute'], bossesSeen: ['varg'], rnd: () => 0.3 };
+  const w1 = makeWave(1, opts), w6 = makeWave(6, opts), w5 = makeWave(5, opts);
+  assert.equal(w1.length, 3);
+  assert.ok(w6.length > w1.length && w6[0].lv > w1[0].lv, 'later waves are bigger and stronger');
+  assert.ok(w5.some(e => e.leader && e.id === 'varg'), 'champion on wave 5');
+  assert.ok(w1.every(e => !e.leader));
+  for (const e of [...w1, ...w5, ...w6]) assert.ok(isPassable(ARENA.tiles[e.r][e.c]), 'enemies spawn on floor');
+  assert.equal(waveRewards(5).gold, 2 * (25 + 50), 'champion waves pay double gold');
+
+  const save = newSave();
+  assert.equal(isEndlessUnlocked(save), false);
+  save.cleared.yard = true; save.cleared.hills = true;
+  assert.ok(isEndlessUnlocked(save));
+  assert.ok(!arenaPool(save).includes('varg'));
+  const gold = save.gold;
+  const r = awardWave(save, 3, ['kai', 'rin']);
+  assert.equal(save.gold, gold + waveRewards(3).gold);
+  assert.equal(save.endless.best, 3);
+  assert.equal(r.levelUps.length, 2);
+
+  const s = createBattle({ ...ARENA, enemies: w1 }, { squad: [{ id: 'kai', lv: 4 }, { id: 'rin', lv: 4 }] });
+  const [kai, rin] = livingUnits(s, 'hero');
+  rin.alive = false; rin.hp = 0;
+  kai.hp = 10;
+  setupWave(s, 2, makeWave(2, opts));
+  assert.equal(s.mission.wave, 2);
+  assert.ok(!s.units.includes(rin), 'KO’d heroes stay down');
+  assert.equal(kai.hp, 10 + Math.round(kai.maxHp * 0.3));
+  assert.deepEqual([kai.r, kai.c], [ARENA.spawns[0].r, ARENA.spawns[0].c]);
+  assert.equal(livingUnits(s, 'enemy').length, 3);
+  assert.match(missionText(s), /Wave 2: 3 enemies left/);
 });

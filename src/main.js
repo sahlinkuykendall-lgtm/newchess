@@ -5,9 +5,11 @@ import { audio } from './audio.js';
 import { bindProfileUi } from './ui/profile.js';
 import { showSquad, hideSquad } from './ui/campaign.js';
 import { bindArmory } from './ui/armory.js';
-import { initHub, showHub, hideHub, renderSplash } from './ui/hub.js';
+import { initHub, showHub, hideHub, renderSplash, teamLevel } from './ui/hub.js';
 import { loadSave, resetSave, awardVictory, squadEntry, isStageUnlocked } from './game/progress.js';
 import { UNITS, xpToNext } from './game/data.js';
+import { DIFFICULTY } from './game/rules.js';
+import { ARENA, makeWave, arenaPool, squadLevel, awardWave, startRun, endlessRecord, isEndlessUnlocked } from './game/endless.js';
 import { renderPortrait } from './render/sprites.js';
 import { VERSION, VERSION_NOTE, ASSETS } from './version.js';
 
@@ -126,6 +128,82 @@ function openSquad(index) {
   showSquad(save, LEVELS[index], squad => { audio.sfx('select'); startStage(index, squad); }, n => audio.sfx(n));
 }
 
+// ---------------------------------------------------------------- endless arena
+function openEndlessSquad() {
+  if (!isEndlessUnlocked(save)) return;
+  current = { ...(current ?? {}), pendingEndless: true };
+  hideAll();
+  const level = { ...ARENA, heroLevel: teamLevel(save) };
+  showSquad(save, level, squad => { audio.sfx('select'); startEndless(squad); }, n => audio.sfx(n));
+}
+
+const bossesSeen = () => ['varg', 'ignis'].filter(id => LEVELS.some(l => save.cleared[l.id] && l.enemies.some(e => e.id === id)));
+const waveOpts = run => ({ teamLv: run.teamLv, pool: run.pool, bossesSeen: run.bosses });
+
+function startEndless(squad) {
+  hideAll();
+  startRun(save);
+  const run = { wave: 1, gold: 0, xp: 0, teamLv: squadLevel(save, squad.map(h => h.id)), pool: arenaPool(save), bosses: bossesSeen() };
+  current = { endless: true, squad, run };
+  $('btn-forfeit').classList.remove('hidden');
+  battle.start({ ...ARENA, enemies: makeWave(1, waveOpts(run)) }, { squad, difficulty: settings.difficulty });
+}
+
+function nextWave() {
+  const run = current.run;
+  run.wave++;
+  $('result').classList.add('hidden');
+  battle.nextWave(run.wave, makeWave(run.wave, waveOpts(run)), { mult: DIFFICULTY[settings.difficulty] ?? 1 });
+}
+
+const levelRows = levelUps => '<div class="res-list">' + levelUps.map(u => `
+      <div class="res-row">
+        <canvas data-id="${u.id}"></canvas>
+        <span class="res-name">${esc(UNITS[u.id].name)}</span>
+        <span class="res-lv">Lv ${u.from}${u.to > u.from ? ` → <b>${u.to}</b> <em>LEVEL UP!</em>` : ''}</span>
+        <div class="res-xp"><i style="width:${(u.xp / xpToNext(u.to)) * 100}%"></i></div>
+      </div>`).join('') + '</div>';
+
+function showResult(result, title, html, { next = null, retry = 'Retry', menu = 'Menu' } = {}) {
+  $('result-title').textContent = title;
+  $('result-title').className = result;
+  $('result-body').innerHTML = html;
+  $('btn-next').classList.toggle('hidden', !next);
+  if (next) $('btn-next').textContent = next;
+  $('btn-retry').textContent = retry;
+  $('btn-to-camp').textContent = menu;
+  $('result').classList.remove('hidden');
+  for (const c of $('result-body').querySelectorAll('canvas[data-id]')) {
+    renderPortrait(c, UNITS[c.dataset.id].look, { focus: 'bust', zoom: c.clientHeight / 40, t: 1000 });
+  }
+}
+
+function handleEndless(result, { squadIds, state }) {
+  const run = current.run;
+  if (result === 'victory') {
+    const r = awardWave(save, run.wave, squadIds);
+    run.gold += r.gold; run.xp += r.xp;
+    const left = state.units.filter(u => u.alive && u.team === 'hero').length;
+    const champ = (run.wave + 1) % 5 === 0;
+    showResult('victory', `WAVE ${run.wave} CLEARED!`, `
+      <p class="res-sub">Banked <b>+${r.xp} XP</b> each · <b>+${r.gold} 🪙</b>${r.newBest ? ' · <b>🏆 New best!</b>' : ''}<br>
+      This run: <b>${run.gold} 🪙</b> · <b>${run.xp} XP</b> · ${left}/${squadIds.length} heroes standing</p>
+      ${levelRows(r.levelUps)}
+      <div class="res-join">Next: <b>Wave ${run.wave + 1}</b>${champ ? ' — 👑 an <b>Arena Champion</b> joins the fight!' : ''} Survivors heal 30%. Level-ups apply next run.</div>`,
+      { next: `Wave ${run.wave + 1} ▶`, retry: 'New Run', menu: 'Cash Out' });
+    $('btn-retry').classList.add('hidden');
+  } else {
+    const rec = endlessRecord(save);
+    const cleared = run.wave - 1;
+    showResult('defeat', 'RUN OVER', `
+      <p class="res-sub">You cleared <b>${cleared} wave${cleared === 1 ? '' : 's'}</b> · Best: <b>wave ${rec.best}</b><br>
+      Earned this run: <b>${run.gold} 🪙</b> · <b>${run.xp} XP</b> each — already banked.</p>
+      <ul class="rules"><li>Level up and gear up, then try again.</li><li>Keep a healer alive — KO’d heroes stay down until the run ends.</li></ul>`,
+      { retry: 'New Run', menu: 'Menu' });
+    $('btn-retry').classList.remove('hidden');
+  }
+}
+
 function startStage(index, squad) {
   hideAll();
   current = { index, squad };
@@ -133,7 +211,10 @@ function startStage(index, squad) {
   battle.start(LEVELS[index], { squad, difficulty: settings.difficulty });
 }
 
-async function handleEnd(result, { level, squadIds }) {
+async function handleEnd(result, info) {
+  if (current?.endless) return handleEndless(result, info);
+  const { level, squadIds } = info;
+  $('btn-retry').classList.remove('hidden');
   const title = $('result-title');
   const next = LEVELS[current.index + 1];
   let html = '';
@@ -142,13 +223,7 @@ async function handleEnd(result, { level, squadIds }) {
     const r = awardVictory(save, level, squadIds);
     title.textContent = 'VICTORY!';
     html += `<p class="res-sub">${esc(level.stage)} ${esc(level.name)} cleared! <b>+${r.xp} XP</b> each · <b>+${r.gold} 🪙</b>${r.firstClear ? '' : ' (replay)'} · Gold: ${save.gold}</p>`;
-    html += '<div class="res-list">' + r.levelUps.map(u => `
-      <div class="res-row">
-        <canvas data-id="${u.id}"></canvas>
-        <span class="res-name">${esc(UNITS[u.id].name)}</span>
-        <span class="res-lv">Lv ${u.from}${u.to > u.from ? ` → <b>${u.to}</b> <em>LEVEL UP!</em>` : ''}</span>
-        <div class="res-xp"><i style="width:${(u.xp / xpToNext(u.to)) * 100}%"></i></div>
-      </div>`).join('') + '</div>';
+    html += levelRows(r.levelUps);
     for (const id of r.joined) html += `<div class="res-join">✨ <b>${esc(UNITS[id].name)}</b> joined your team!</div>`;
     if (next && next.boardNo !== level.boardNo) html += `<div class="res-join">🗺 <b>Board ${next.boardNo}: ${esc(next.board)}</b> unlocked!</div>`;
     if (!next) html += '<div class="res-join">👑 Every board cleared! More are coming.</div>';
@@ -162,24 +237,19 @@ async function handleEnd(result, { level, squadIds }) {
         <li>Or switch to <b>Easy</b> in Settings.</li>
       </ul>`;
   }
-  title.className = result;
-  $('result-body').innerHTML = html;
-  $('btn-next').classList.toggle('hidden', !(result === 'victory' && next));
-  $('result').classList.remove('hidden');
-  for (const c of $('result-body').querySelectorAll('canvas[data-id]')) {
-    renderPortrait(c, UNITS[c.dataset.id].look, { focus: 'bust', zoom: c.clientHeight / 40, t: 1000 });
-  }
+  showResult(result, title.textContent, html, { next: result === 'victory' && next ? 'Next Stage ›' : null });
 }
 
 $('btn-start').addEventListener('click', e => { e.stopPropagation(); audio.sfx('click'); openMenu('home'); });
 $('title').addEventListener('click', () => { audio.sfx('click'); openMenu('home'); });
-$('btn-squad-back').addEventListener('click', () => { audio.sfx('click'); openMenu('story'); });
+$('btn-squad-back').addEventListener('click', () => { audio.sfx('click'); openMenu(current?.pendingEndless ? 'modes' : 'story'); });
 // Enemies you've met: everything in stages you can play.
 const seenEnemies = () => [...new Set(LEVELS.filter((l, i) => isStageUnlocked(save, i)).flatMap(l => l.enemies.map(e => e.id)))];
 bindArmory();
 initHub({
   getSave: () => save,
-  onBattle: i => { audio.sfx('select'); openSquad(i); },
+  onBattle: i => { audio.sfx('select'); current = { ...(current ?? {}), pendingEndless: false }; openSquad(i); },
+  onEndless: () => { audio.sfx('select'); openEndlessSquad(); },
   onSettings: () => openSettings(),
   sound: n => audio.sfx(n),
   seenEnemies,
@@ -187,12 +257,19 @@ initHub({
 $('btn-squad-armory').addEventListener('click', () => {
   audio.sfx('click');
   const idx = current?.pendingIndex ?? 0;
-  openMenu('armory', { onBack: () => openSquad(idx) });
+  const endless = !!current?.pendingEndless;
+  openMenu('armory', { onBack: () => (endless ? openEndlessSquad() : openSquad(idx)) });
 });
-$('btn-next').addEventListener('click', () => { audio.sfx('click'); battle.stop(); openSquad(current.index + 1); });
+$('btn-next').addEventListener('click', () => {
+  audio.sfx('click');
+  if (current.endless) return nextWave();
+  battle.stop(); openSquad(current.index + 1);
+});
 $('btn-retry').addEventListener('click', () => {
   audio.sfx('click');
-  startStage(current.index, current.squad.map(h => squadEntry(save, h.id)));
+  const squad = current.squad.map(h => squadEntry(save, h.id));
+  if (current.endless) return startEndless(squad);
+  startStage(current.index, squad);
 });
 $('btn-to-camp').addEventListener('click', () => { audio.sfx('click'); openMenu('home'); });
 
@@ -208,7 +285,7 @@ function openSettings() {
 }
 $('btn-settings').addEventListener('click', openSettings);
 $('btn-settings-close').addEventListener('click', () => { $('settings').classList.add('hidden'); audio.sfx('click'); });
-$('btn-forfeit').addEventListener('click', () => { $('settings').classList.add('hidden'); openMenu('story'); });
+$('btn-forfeit').addEventListener('click', () => { $('settings').classList.add('hidden'); openMenu(current?.endless ? 'modes' : 'story'); });
 $('set-diff').addEventListener('change', e => { settings.difficulty = e.target.value; saveSettings(); });
 $('btn-reset').addEventListener('click', () => {
   if (!confirm('Reset all progress? Hero levels, recruits and cleared stages will be lost.')) return;

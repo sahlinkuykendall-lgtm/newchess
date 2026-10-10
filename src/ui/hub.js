@@ -7,6 +7,7 @@ import { heroInfo, isStageUnlocked, REPLAY_XP } from '../game/progress.js';
 import { renderPortrait } from '../render/sprites.js';
 import { HERO_IDS, ENEMY_IDS, openProfile } from './profile.js';
 import { showArmory, hideArmory } from './armory.js';
+import { isEndlessUnlocked, endlessRecord } from '../game/endless.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -16,11 +17,12 @@ export const MISSION = {
   rout: { icon: '⚔️', name: 'Rout' },
   checkmate: { icon: '♚', name: 'Checkmate' },
   survive: { icon: '⏳', name: 'Survive' },
+  endless: { icon: '♾️', name: 'Endless' },
 };
 const RANKS = [[0, 'Rookie'], [2, 'Challenger'], [4, 'Contender'], [6, 'Veteran'], [8, 'Champion'], [10, 'Grandmaster']];
 const SEEN_KEY = 'gambit-arena:seen-heroes';
 
-let opts = null;      // { getSave, onBattle(index), onSettings, sound(name), seenEnemies() }
+let opts = null;      // { getSave, onBattle(index), onEndless(), onSettings, sound(name), seenEnemies() }
 let tab = 'home';
 let showcase = null;  // hero id on the home pedestal
 let boardShown = null;
@@ -399,19 +401,20 @@ function renderHeroes(bestiary = false) {
 function renderModes() {
   const s = save();
   const cleared = LEVELS.filter(l => s.cleared[l.id]).length;
-  const mode = (id, icon, name, desc, { soon = false, meta = '' } = {}) => `
-    <button class="mode-card m-${id} ${soon ? 'soon' : ''}" data-mode="${id}" ${soon ? 'disabled' : ''}>
+  const mode = (id, icon, name, desc, { soon = false, meta = '', locked = '' } = {}) => `
+    <button class="mode-card m-${id} ${soon || locked ? 'soon' : ''}" data-mode="${id}" ${soon || locked ? 'disabled' : ''}>
       <span class="mc-icon">${icon}</span>
       <span class="mc-text"><b>${name}</b><small>${desc}</small></span>
-      ${soon ? '<span class="mc-tag">SOON</span>' : `<span class="mc-meta">${meta}</span>`}
+      ${soon ? '<span class="mc-tag">SOON</span>' : locked ? `<span class="mc-tag">🔒 ${locked}</span>` : `<span class="mc-meta">${meta}</span>`}
     </button>`;
   $('tab-modes').innerHTML = `
     <div class="modes">
       ${mode('story', '📖', 'Story Campaign', 'The Grand Gambit — fight your way to the top.', { meta: `${cleared}/${LEVELS.length} ›` })}
-      ${mode('endless', '♾️', 'Endless Arena', 'Survive wave after wave for gold and XP.', { soon: true })}
+      ${mode('endless', '♾️', 'Endless Arena', 'Survive wave after wave for gold and XP. A champion every 5th wave.', isEndlessUnlocked(s) ? { meta: `Best ${endlessRecord(s).best} ›` } : { locked: 'Clear 1-2' })}
       ${mode('tournament', '🏟️', 'Tournament', 'Bracket fights against rival teams.', { soon: true })}
       ${mode('daily', '📅', 'Daily Challenge', 'A new puzzle battle every day.', { soon: true })}
       ${mode('versus', '🤝', 'Pass & Play', 'Battle a friend on one phone.', { soon: true })}
     </div>`;
   $('tab-modes').querySelector('[data-mode="story"]').onclick = () => { opts.sound('click'); setTab('story'); };
+  $('tab-modes').querySelector('[data-mode="endless"]').onclick = () => opts.onEndless();
 }

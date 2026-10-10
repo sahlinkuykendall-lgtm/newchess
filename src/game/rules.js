@@ -637,5 +637,6 @@ export function missionText(state) {
   const m = state.mission;
   if (m?.type === 'checkmate') return `Checkmate: KO ${state.units.find(u => u.leader)?.name ?? 'the leader'}`;
   if (m?.type === 'survive') return `Survive: turn ${Math.min(state.turn, m.turns)}/${m.turns}`;
+  if (m?.type === 'endless') return `Wave ${m.wave}: ${livingUnits(state, 'enemy').length} enemies left`;
   return `Rout: ${livingUnits(state, 'enemy').length} enemies left`;
 }

@@ -5,6 +5,7 @@ import { ASPECTS, UNITS } from '../game/data.js';
 import { renderPortrait } from '../render/sprites.js';
 import { audio } from '../audio.js';
 import { openProfile } from './profile.js';
+import { setupWave } from '../game/endless.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -39,6 +40,34 @@ export class Battle {
     await this.runDialog(level.intro ?? []);
     if (gen !== this.gen) return;
     this.board.focusUnits(R.livingUnits(this.state, 'hero'));
+    R.startPhase(this.state, 'hero');
+    if (this.state.mission?.type === 'endless') await this.banner(`WAVE ${this.state.mission.wave}`, 'enemy');
+    await this.banner('YOUR TURN', 'hero');
+    if (gen !== this.gen) return;
+    this.mode = 'idle';
+    this.renderAll();
+  }
+
+  // Endless Arena: survivors regroup and the next wave arrives on the same map.
+  async nextWave(n, enemies, { mult = 1 } = {}) {
+    const gen = ++this.gen;
+    setupWave(this.state, n, enemies, { mult });
+    this.board.setState(this.state);
+    this.board.focusUnits(R.livingUnits(this.state, 'hero'), { animate: false, zoom: this.board.playZoom() });
+    this.sel = null; this.inspect = null; this.action = null; this.pending = null;
+    this.mode = 'busy';
+    $('hud').classList.remove('hidden');
+    this.renderAll();
+    audio.play('battle');
+    await this.banner(`WAVE ${n}`, 'enemy');
+    if (gen !== this.gen) return;
+    if (enemies.some(e => e.leader)) {
+      const champ = this.state.units.find(u => u.leader);
+      await this.board.focusTile(champ.r, champ.c);
+      await this.banner('👑 CHAMPION!', 'enemy');
+      if (gen !== this.gen) return;
+      this.board.focusUnits(R.livingUnits(this.state, 'hero'));
+    }
     R.startPhase(this.state, 'hero');
     await this.banner('YOUR TURN', 'hero');
     if (gen !== this.gen) return;

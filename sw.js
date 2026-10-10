@@ -6,7 +6,7 @@ const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest', 'version.json',
   'src/main.js', 'src/version.js', 'src/audio.js',
   'src/game/data.js', 'src/game/rules.js', 'src/game/ai.js', 'src/game/levels.js',
-  'src/game/characters.js', 'src/game/progress.js', 'src/game/items.js',
+  'src/game/characters.js', 'src/game/progress.js', 'src/game/items.js', 'src/game/endless.js',
   'src/render/board.js', 'src/render/sprites.js',
   'src/ui/battle.js', 'src/ui/profile.js', 'src/ui/campaign.js', 'src/ui/armory.js', 'src/ui/hub.js',
   'fonts/lilita-one.woff2', 'fonts/nunito.woff2',

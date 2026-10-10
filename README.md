@@ -31,6 +31,8 @@ Note: a Home Screen app has its own storage — clearing Safari's data does not 
 - Before each fight, pick up to 5 heroes. Heroes earn **XP** and **level up** when you win;
   new heroes join as the story goes on. Replay cleared stages to grind (60% XP).
 - Wins pay **gold**. Spend it in the **⚔ Armory** on a weapon, armor and charm for each hero.
+- **Endless Arena** (Modes tab, unlocks after 1-2): survive wave after wave for gold and XP, banked after
+  every wave. Survivors heal 30% between waves, KO'd heroes stay down, and a champion shows up every 5th wave.
 - Too hard? Switch **Difficulty** to Easy in Settings. Want pain? Hard.
 - **Tap** one of your fighters → blue tiles show where they can move. Tap a tile to move.
 - Pick **Attack**, a **Skill** (costs SP) or your **★ Ultimate** (at 100 SP), then tap a red target.

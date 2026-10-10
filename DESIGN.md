@@ -237,6 +237,18 @@ bottom tab bar — Armory · Heroes · **Battle** (raised centre button) · Stor
 Fonts: Lilita One (headings) and Nunito (UI), bundled in `fonts/` (SIL Open Font License).
 Code: `src/ui/hub.js` (menu), `src/ui/campaign.js` (squad select).
 
+## Endless Arena (v0.10)
+Unlocks after clearing 1-2 (Modes tab). One symmetric 15×15 arena with a shrine on a raised centre.
+- **Waves:** wave *n* has `min(3 + ⌊(n−1)/2⌋, 7)` enemies at level `teamLv − 1 + ⌊(n−1)/2⌋`, drawn
+  from enemies you've met in the campaign. Every 5th wave an **Arena Champion** (Varg, Ignis from
+  wave 10 once met, else a Bog Brute) replaces one of them.
+- **Between waves:** survivors regroup at the start, heal 30% max HP and gain 20 SP; KO'd heroes stay
+  down until the run ends. Level-ups earned during a run apply to the next run.
+- **Rewards** are banked after every wave: gold `25 + 10n` (×2 on champion waves), XP `20 + 8n` for
+  everyone who started the run. **Cash Out** any time; losing keeps everything banked. Best wave is saved.
+- Simulated AI-vs-AI runs clear about 5 waves on average; a typical run pays ~350 gold and ~240 XP.
+Code: `src/game/endless.js` (map, waves, rewards, `setupWave`), `Battle.nextWave` in `src/ui/battle.js`.
+
 ## Characters
 Every fighter has hand-drawn (procedural) anime art with idle animations, a chess-piece
 sigil, a passive ability and a full story profile — see **Characters** on the title screen,
